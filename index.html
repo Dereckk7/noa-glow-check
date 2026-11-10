@@ -163,6 +163,12 @@ details.json pre{margin:10px 0 0;max-height:280px;overflow:auto;font-size:11.5px
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+/* language switch */
+.cover-top{display:flex;justify-content:flex-end;margin-bottom:6px}
+.langs{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--card);border:1.5px solid var(--line)}
+.lang{min-width:44px;min-height:36px;padding:0 12px;border:0;border-radius:999px;background:transparent;font-family:var(--f-label);font-weight:500;font-size:11.5px;letter-spacing:.14em;color:var(--ink-2);cursor:pointer}
+.lang[aria-pressed="true"]{background:var(--ink);color:var(--ivory)}
 </style>
 </head>
 <body>
@@ -172,17 +178,92 @@ details.json pre{margin:10px 0 0;max-height:280px;overflow:auto;font-size:11.5px
 
 <script>
 /* ============================================================
-   NOA Glow Check — questionnaire v1
+   NOA Glow Check — questionnaire v2 (FR / ES / EN)
    API vide = mode aperçu (rien n'est envoyé).
-   La version en ligne (fonction Neon) renseigne API: '/api'.
+   La version en ligne renseigne API: '/api'.
+   Les valeurs enregistrées sont identiques dans les 3 langues ;
+   seule la clé `lang` indique la langue d'affichage.
    ============================================================ */
 const CONFIG = {
   API: '/api',
-  VERSION: 'noa-survey-v1',
+  VERSION: 'noa-survey-v2',
   IMG: 'img/'
 };
 const LIVE = !!CONFIG.API;
 const post = (path, body) => fetch(CONFIG.API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+/* ---------- language ---------- */
+const LANGS = ['fr', 'es', 'en'];
+function detectLang() {
+  try {
+    const q = new URLSearchParams(location.search).get('lang') || location.hash.replace('#', '');
+    if (LANGS.includes(q)) return q;
+  } catch (e) {}
+  const list = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'fr']);
+  for (const l of list) { const c = String(l).slice(0, 2).toLowerCase(); if (LANGS.includes(c)) return c; }
+  return 'fr';
+}
+let LANG = detectLang();
+const t = (fr, es, en) => ({ fr, es, en });
+const L = (x) => (x && typeof x === 'object' && 'fr' in x) ? (x[LANG] ?? x.fr) : x;
+const NUMFMT = { fr: 'fr-FR', es: 'de-DE', en: 'en-US' }; // de-DE: 5.000 (es-ES omits the dot below 10 000)
+const n = (v) => new Intl.NumberFormat(NUMFMT[LANG]).format(v).replace(/\s/g, ' ');
+const band = (lo, hi) => {
+  if (lo == null) return { fr: `Moins de ${n(hi)}`, es: `Menos de ${n(hi)}`, en: `Under ${n(hi)}` }[LANG];
+  if (hi == null) return { fr: `Plus de ${n(lo)}`, es: `Más de ${n(lo)}`, en: `Over ${n(lo)}` }[LANG];
+  return `${n(lo)} – ${n(hi)}`;
+};
+
+const UI = {
+  lede: t('On prépare quelque chose pour votre peau.', 'Estamos preparando algo para su piel.', 'We’re making something for your skin.'),
+  intro: t('2 minutes. Quelques questions sur votre routine beauté, vos habitudes et ce que vous aimeriez vraiment trouver en skincare.',
+           '2 minutos. Algunas preguntas sobre su rutina de belleza, sus hábitos y lo que realmente le gustaría encontrar en el cuidado de la piel.',
+           '2 minutes. A few questions about your beauty routine, your habits and what you’d really like to find in skincare.'),
+  nQuestions: t('questions', 'preguntas', 'questions'),
+  anon: t('Anonyme', 'Anónimo', 'Anonymous'),
+  time: t('Environ 2 à 3 min', 'Unos 2 a 3 min', 'About 2–3 min'),
+  demo: t('Aperçu : les réponses ne sont pas enregistrées dans cette version.', 'Vista previa: las respuestas no se guardan en esta versión.', 'Preview: answers are not saved in this version.'),
+  langLabel: t('Langue', 'Idioma', 'Language'),
+  next: t('Continuer', 'Continuar', 'Continue'),
+  send: t('Envoyer mes réponses', 'Enviar mis respuestas', 'Send my answers'),
+  skip: t('Passer cette question', 'Saltar esta pregunta', 'Skip this question'),
+  back: t('Question précédente', 'Pregunta anterior', 'Previous question'),
+  selected: t('sélectionné(s)', 'seleccionado(s)', 'selected'),
+  maxMsg: t('Maximum {m} choix. Retirez-en un pour en ajouter un autre.', 'Máximo {m} opciones. Quite una para añadir otra.', 'Up to {m} choices. Remove one to add another.'),
+  firstTitle: t('Imaginez que vous voyez ces produits pour la première fois.', 'Imagine que ve estos productos por primera vez.', 'Imagine you’re seeing these products for the first time.'),
+  firstHint: t('Sur Instagram ou dans une boutique. Répondez à l’instinct : il n’y a ni bonne ni mauvaise réponse.', 'En Instagram o en una tienda. Responda por instinto: no hay respuestas buenas ni malas.', 'On Instagram or in a shop. Go with your gut: there are no right or wrong answers.'),
+  firstCta: t('Je regarde', 'Vamos a ver', 'Let’s look'),
+  collectionAlt: t('Cinq produits de soin : nettoyant rose, sérum pêche, sérum lilas, crème jaune, protection solaire ivoire', 'Cinco productos: limpiador rosa, sérum melocotón, sérum lila, crema amarilla, protector solar marfil', 'Five skincare products: pink cleanser, peach serum, lilac serum, yellow cream, ivory sunscreen'),
+  likely: t('À quel point seriez-vous susceptible de l’acheter ?', '¿Qué probabilidad hay de que lo compre?', 'How likely would you be to buy it?'),
+  notAtAll: t('Pas du tout', 'Nada probable', 'Not at all'),
+  definitely: t('Certainement', 'Seguro que sí', 'Definitely'),
+  priceTitle: t('Parlons prix.', 'Hablemos de precio.', 'Let’s talk price.'),
+  priceOk: t('Quel prix vous semblerait raisonnable ?', '¿Qué precio le parecería razonable?', 'What price would feel reasonable?'),
+  priceHigh: t('À partir de quel prix ce serait trop cher ?', '¿A partir de qué precio sería demasiado caro?', 'At what price would it be too expensive?'),
+  priceNote: t('Prix en FCFA.', 'Precios en FCFA.', 'Prices in FCFA.'),
+  unknown: t('Je ne sais pas', 'No lo sé', 'I don’t know'),
+  format: t('FORMAT', 'FORMATO', 'FORMAT'),
+  dome: t('Pot à dôme', 'Tarro con cúpula', 'Dome jar'),
+  pump: t('Flacon pompe', 'Frasco con dosificador', 'Pump bottle'),
+  noPref: t('Aucune préférence', 'Sin preferencia', 'No preference'),
+  none: t('Aucun', 'Ninguno', 'None'),
+  endBody: t('Vos réponses vont nous aider à créer quelque chose que vous aurez réellement envie d’utiliser.', 'Sus respuestas nos ayudarán a crear algo que realmente tenga ganas de usar.', 'Your answers will help us create something you’ll actually want to use.'),
+  sendFail: t('Vos réponses n’ont pas pu être envoyées (connexion).', 'No se pudieron enviar sus respuestas (conexión).', 'Your answers couldn’t be sent (connection).'),
+  retry: t('Réessayer', 'Reintentar', 'Try again'),
+  waitTitle: t('Être prévenue du lancement', 'Recibir aviso del lanzamiento', 'Hear about the launch'),
+  waitBody: t('Facultatif. Laissez votre numéro WhatsApp si vous voulez recevoir un message au lancement. Il est enregistré séparément de vos réponses.', 'Opcional. Deje su número de WhatsApp si quiere recibir un mensaje en el lanzamiento. Se guarda por separado de sus respuestas.', 'Optional. Leave your WhatsApp number if you’d like a message at launch. It’s stored separately from your answers.'),
+  waitLabel: t('Numéro WhatsApp, avec indicatif', 'Número de WhatsApp, con prefijo', 'WhatsApp number, with country code'),
+  waitConsent: t('J’accepte d’être contactée par WhatsApp au sujet du lancement. Je peux me désinscrire à tout moment.', 'Acepto que me contacten por WhatsApp sobre el lanzamiento. Puedo darme de baja en cualquier momento.', 'I agree to be contacted on WhatsApp about the launch. I can opt out at any time.'),
+  waitBtn: t('M’inscrire', 'Apuntarme', 'Sign me up'),
+  waitOk: t('C’est noté. À très vite.', 'Anotado. Hasta muy pronto.', 'Got it. Talk soon.'),
+  waitFail: t('L’inscription n’a pas fonctionné. Réessayez dans un instant.', 'No se pudo registrar. Inténtelo de nuevo en un momento.', 'Sign-up didn’t work. Please try again in a moment.'),
+  offline: t('Pas de connexion. Réessayez dans un instant.', 'Sin conexión. Inténtelo de nuevo en un momento.', 'No connection. Please try again in a moment.'),
+  waitPreview: t('Aperçu : numéro non enregistré.', 'Vista previa: número no guardado.', 'Preview: number not saved.'),
+  jsonSummary: t('Aperçu : voir les données qui seraient enregistrées', 'Vista previa: ver los datos que se guardarían', 'Preview: see the data that would be saved'),
+  minorTitle: t('Merci beaucoup.', 'Muchas gracias.', 'Thank you so much.'),
+  minorBody: t('Ce questionnaire s’adresse aux personnes de 18 ans et plus. Aucune de vos réponses n’a été enregistrée.', 'Este cuestionario está dirigido a personas de 18 años o más. No se ha guardado ninguna de sus respuestas.', 'This survey is for people aged 18 and over. None of your answers were saved.'),
+  minorBtn: t('Je me suis trompée d’âge', 'Me equivoqué de edad', 'I picked the wrong age')
+};
 
 /* ---------- icons ---------- */
 const CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F7F1E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -200,133 +281,181 @@ const ICONS = {
   body: I('<path d="M8 3h8l-1 4h-6zM9 7h6l2 4v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8z"/>'),
   none: I('<circle cx="12" cy="12" r="8"/><path d="M8 8l8 8"/>')
 };
-const WM = (c='#46222F', w=128) => `<svg class="wm" viewBox="0 0 354 120" style="width:${w}px" role="img" aria-label="NOA"><path d="M17 103V17L83 103V17" fill="none" stroke="${c}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/><path d="M112 60a60 60 0 1 0 120 0a60 60 0 1 0 -120 0Z M150 60a22 22 0 1 0 44 0a22 22 0 1 0 -44 0Z" fill="${c}" fill-rule="evenodd"/><path d="M261 103L299 17L337 103" fill="none" stroke="${c}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const WM = (c = '#46222F', w = 128) => `<svg class="wm" viewBox="0 0 354 120" style="width:${w}px" role="img" aria-label="NOA"><path d="M17 103V17L83 103V17" fill="none" stroke="${c}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/><path d="M112 60a60 60 0 1 0 120 0a60 60 0 1 0 -120 0Z M150 60a22 22 0 1 0 44 0a22 22 0 1 0 -44 0Z" fill="${c}" fill-rule="evenodd"/><path d="M261 103L299 17L337 103" fill="none" stroke="${c}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const RING = (c, s) => `<svg viewBox="0 0 120 120" width="${s}" height="${s}" aria-hidden="true"><path d="M0 60a60 60 0 1 0 120 0a60 60 0 1 0 -120 0Z M38 60a22 22 0 1 0 44 0a22 22 0 1 0 -44 0Z" fill="${c}" fill-rule="evenodd"/></svg>`;
 
-/* ---------- products & colours (order shuffled per respondent to avoid position bias) ---------- */
+/* ---------- products & colours (order shuffled per respondent) ---------- */
 const PRODUCTS = [
-  {id:'cloud', name:'NOA CLOUD', fn:'Nettoyant doux'},
-  {id:'glow', name:'NOA GLOW', fn:'Sérum éclat vitamine C'},
-  {id:'milk', name:'NOA MILK', fn:'Crème hydratante barrière'},
-  {id:'ageless', name:'NOA AGELESS', fn:'Sérum peptides fermeté'},
-  {id:'sun', name:'NOA SUN', fn:'Protection SPF 50'}
+  { id: 'cloud', name: 'NOA CLOUD', fn: t('Nettoyant doux', 'Limpiador suave', 'Gentle cleanser') },
+  { id: 'glow', name: 'NOA GLOW', fn: t('Sérum éclat vitamine C', 'Sérum iluminador vitamina C', 'Vitamin C glow serum') },
+  { id: 'milk', name: 'NOA MILK', fn: t('Crème hydratante barrière', 'Crema hidratante barrera', 'Barrier moisturizer') },
+  { id: 'ageless', name: 'NOA AGELESS', fn: t('Sérum peptides fermeté', 'Sérum péptidos reafirmante', 'Peptide firming serum') },
+  { id: 'sun', name: 'NOA SUN', fn: t('Protection SPF 50', 'Protección SPF 50', 'SPF 50 sunscreen') }
 ];
 const COLORS = [
-  {id:'pink', label:'Rose fraise', hex:'#F2A7B8'},
-  {id:'peach', label:'Pêche corail', hex:'#F6B48F'},
-  {id:'lilac', label:'Lilas', hex:'#C986E4'},
-  {id:'butter', label:'Jaune beurre', hex:'#F4D96B'},
-  {id:'ivory', label:'Ivoire crème', hex:'#F7F1E8'}
+  { id: 'pink', label: t('Rose fraise', 'Rosa fresa', 'Strawberry pink'), hex: '#F2A7B8' },
+  { id: 'peach', label: t('Pêche corail', 'Melocotón coral', 'Peach coral'), hex: '#F6B48F' },
+  { id: 'lilac', label: t('Lilas', 'Lila', 'Lilac'), hex: '#C986E4' },
+  { id: 'butter', label: t('Jaune beurre', 'Amarillo mantequilla', 'Butter yellow'), hex: '#F4D96B' },
+  { id: 'ivory', label: t('Ivoire crème', 'Marfil crema', 'Creamy ivory'), hex: '#F7F1E8' }
 ];
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const ORDER = { products: shuffle(PRODUCTS.map(p => p.id)), colors: shuffle(COLORS.map(c => c.id)) };
 const P = (id) => PRODUCTS.find(p => p.id === id);
 
 const SECTION = {
-  skin:{n:'01', t:'Your skin', c:'pink'},
-  routine:{n:'02', t:'Your routine', c:'peach'},
-  buy:{n:'03', t:'What do you buy?', c:'butter'},
-  world:{n:'04', t:'Your beauty world', c:'lilac'},
-  first:{n:'05', t:'First impression', c:'pink'},
-  price:{n:'06', t:'The price', c:'peach'},
-  intent:{n:'07', t:'Your verdict', c:'lilac'}
+  skin: { n: '01', t: 'Your skin', c: 'pink' },
+  routine: { n: '02', t: 'Your routine', c: 'peach' },
+  buy: { n: '03', t: 'What do you buy?', c: 'butter' },
+  world: { n: '04', t: 'Your beauty world', c: 'lilac' },
+  first: { n: '05', t: 'First impression', c: 'pink' },
+  price: { n: '06', t: 'The price', c: 'peach' },
+  intent: { n: '07', t: 'Your verdict', c: 'lilac' }
 };
 
-/* ---------- questions ---------- */
-const FCFA = (s) => s + ' FCFA';
+/* ---------- questions (option values are language-neutral) ---------- */
+const UPTO3 = t('Jusqu’à 3 choix.', 'Hasta 3 opciones.', 'Up to 3 choices.');
 const Q = [
-  {id:'profile', section:'skin', type:'groups', title:'Pour commencer, faisons connaissance.', groups:[
-    {key:'age', label:'Votre âge', layout:'two', options:[['u18','Moins de 18 ans'],['18-24','18–24 ans'],['25-29','25–29 ans'],['30-34','30–34 ans'],['35-40','35–40 ans'],['41+','Plus de 40 ans']]},
-    {key:'country', label:'Vous vivez au', layout:'two', options:[['gabon','Gabon'],['cameroun','Cameroun'],['cote_ivoire','Côte d’Ivoire'],['guinee_eq','Guinée équatoriale'],['other','Autre pays',true]]}
-  ]},
-  {id:'skin_type', section:'skin', type:'single', title:'Comment décririez-vous votre peau ?', layout:'two', options:[['dry','Sèche'],['oily','Grasse'],['combination','Mixte'],['normal','Normale'],['sensitive','Sensible'],['unknown','Je ne sais pas']]},
-  {id:'concerns', section:'skin', type:'multi', max:3, title:'Qu’aimeriez-vous améliorer en priorité ?', hint:'Jusqu’à 3 choix.', layout:'two', options:[['acne','Boutons'],['dark_spots','Taches'],['dull','Teint terne'],['dryness','Sécheresse'],['oiliness','Brillance, excès de sébum'],['pores','Pores visibles'],['sensitivity','Irritations, sensibilité'],['dehydration','Manque d’hydratation'],['scars','Marques d’acné'],['firmness','Fermeté, ridules'],['sun','Effets du soleil'],['none','Rien en particulier',true,'exclusive']]},
+  { id: 'profile', section: 'skin', type: 'groups', title: t('Pour commencer, faisons connaissance.', 'Para empezar, conozcámonos.', 'First, a little about you.'), groups: [
+    { key: 'age', label: t('Votre âge', 'Su edad', 'Your age'), layout: 'two', options: [
+      ['u18', t('Moins de 18 ans', 'Menos de 18 años', 'Under 18')], ['18-24', t('18–24 ans', '18–24 años', '18–24')], ['25-29', t('25–29 ans', '25–29 años', '25–29')],
+      ['30-34', t('30–34 ans', '30–34 años', '30–34')], ['35-40', t('35–40 ans', '35–40 años', '35–40')], ['41+', t('Plus de 40 ans', 'Más de 40 años', 'Over 40')]] },
+    { key: 'country', label: t('Votre pays', 'Su país', 'Your country'), layout: 'two', options: [
+      ['gabon', t('Gabon', 'Gabón', 'Gabon')], ['cameroun', t('Cameroun', 'Camerún', 'Cameroon')], ['cote_ivoire', t('Côte d’Ivoire', 'Costa de Marfil', 'Côte d’Ivoire')],
+      ['guinee_eq', t('Guinée équatoriale', 'Guinea Ecuatorial', 'Equatorial Guinea')], ['other', t('Autre pays', 'Otro país', 'Other country'), true]] }
+  ] },
+  { id: 'skin_type', section: 'skin', type: 'single', title: t('Comment décririez-vous votre peau ?', '¿Cómo describiría su piel?', 'How would you describe your skin?'), layout: 'two', options: [
+    ['dry', t('Sèche', 'Seca', 'Dry')], ['oily', t('Grasse', 'Grasa', 'Oily')], ['combination', t('Mixte', 'Mixta', 'Combination')],
+    ['normal', t('Normale', 'Normal', 'Normal')], ['sensitive', t('Sensible', 'Sensible', 'Sensitive')], ['unknown', t('Je ne sais pas', 'No lo sé', 'I don’t know')]] },
+  { id: 'concerns', section: 'skin', type: 'multi', max: 3, title: t('Qu’aimeriez-vous améliorer en priorité ?', '¿Qué le gustaría mejorar primero?', 'What would you most like to improve?'), hint: UPTO3, layout: 'two', options: [
+    ['acne', t('Boutons', 'Granos', 'Breakouts')], ['dark_spots', t('Taches', 'Manchas', 'Dark spots')], ['dull', t('Teint terne', 'Tono apagado', 'Dull skin')],
+    ['dryness', t('Sécheresse', 'Sequedad', 'Dryness')], ['oiliness', t('Brillance, excès de sébum', 'Brillo, exceso de grasa', 'Shine, excess oil')], ['pores', t('Pores visibles', 'Poros visibles', 'Visible pores')],
+    ['sensitivity', t('Irritations, sensibilité', 'Irritación, sensibilidad', 'Irritation, sensitivity')], ['dehydration', t('Manque d’hydratation', 'Falta de hidratación', 'Dehydration')],
+    ['scars', t('Marques d’acné', 'Marcas de acné', 'Acne marks')], ['firmness', t('Fermeté, ridules', 'Firmeza, líneas finas', 'Firmness, fine lines')],
+    ['sun', t('Effets du soleil', 'Efectos del sol', 'Sun damage')], ['none', t('Rien en particulier', 'Nada en particular', 'Nothing in particular'), true, 'exclusive']] },
 
-  {id:'routine', section:'routine', type:'groups', title:'À quoi ressemble votre routine visage aujourd’hui ?', groups:[
-    {key:'routine_count', label:'Nombre de produits utilisés', layout:'one', options:[['0','Aucun, juste de l’eau ou du savon'],['1','1 produit'],['2-3','2 ou 3 produits'],['4-5','4 ou 5 produits'],['6+','6 produits ou plus']]},
-    {key:'routine_when', label:'Quand ?', layout:'two', options:[['am_pm','Matin et soir'],['am','Surtout le matin'],['pm','Surtout le soir'],['weekly','Quelques fois par semaine'],['rarely','Rarement',true]]}
-  ]},
-  {id:'where', section:'routine', type:'multi', max:3, title:'Où achetez-vous vos soins visage le plus souvent ?', hint:'Jusqu’à 3 choix.', layout:'one', options:[['shop','Boutique de cosmétiques, parfumerie'],['pharmacy','Pharmacie'],['supermarket','Supermarché'],['market','Marché'],['social','Vendeuses sur WhatsApp, Instagram ou TikTok'],['ecommerce','Site e-commerce'],['abroad','Ramené de l’étranger'],['other','Ailleurs']]},
-  {id:'budget', section:'routine', type:'single', title:'Combien dépensez-vous environ par mois pour vos soins visage ?', layout:'one', options:[['<5k',FCFA('Moins de 5 000')],['5-10k',FCFA('5 000 – 10 000')],['10-20k',FCFA('10 000 – 20 000')],['20-35k',FCFA('20 000 – 35 000')],['35k+',FCFA('Plus de 35 000')],['unknown','Je ne sais pas']]},
+  { id: 'routine', section: 'routine', type: 'groups', title: t('À quoi ressemble votre routine visage aujourd’hui ?', '¿Cómo es hoy su rutina facial?', 'What does your face routine look like today?'), groups: [
+    { key: 'routine_count', label: t('Nombre de produits utilisés', 'Número de productos que usa', 'Number of products you use'), layout: 'one', options: [
+      ['0', t('Aucun, juste de l’eau ou du savon', 'Ninguno, solo agua o jabón', 'None, just water or soap')], ['1', t('1 produit', '1 producto', '1 product')],
+      ['2-3', t('2 ou 3 produits', '2 o 3 productos', '2 or 3 products')], ['4-5', t('4 ou 5 produits', '4 o 5 productos', '4 or 5 products')], ['6+', t('6 produits ou plus', '6 productos o más', '6 or more products')]] },
+    { key: 'routine_when', label: t('Quand ?', '¿Cuándo?', 'When?'), layout: 'two', options: [
+      ['am_pm', t('Matin et soir', 'Mañana y noche', 'Morning and night')], ['am', t('Surtout le matin', 'Sobre todo por la mañana', 'Mostly mornings')],
+      ['pm', t('Surtout le soir', 'Sobre todo por la noche', 'Mostly evenings')], ['weekly', t('Quelques fois par semaine', 'Algunas veces por semana', 'A few times a week')],
+      ['rarely', t('Rarement', 'Rara vez', 'Rarely'), true]] }
+  ] },
+  { id: 'where', section: 'routine', type: 'multi', max: 3, title: t('Où achetez-vous vos soins visage le plus souvent ?', '¿Dónde compra sus productos faciales con más frecuencia?', 'Where do you usually buy your skincare?'), hint: UPTO3, layout: 'one', options: [
+    ['shop', t('Boutique de cosmétiques, parfumerie', 'Tienda de cosmética, perfumería', 'Beauty shop or perfumery')], ['pharmacy', t('Pharmacie', 'Farmacia', 'Pharmacy')],
+    ['supermarket', t('Supermarché', 'Supermercado', 'Supermarket')], ['market', t('Marché', 'Mercado', 'Market')],
+    ['social', t('Vendeuses sur WhatsApp, Instagram ou TikTok', 'Vendedoras en WhatsApp, Instagram o TikTok', 'Sellers on WhatsApp, Instagram or TikTok')],
+    ['ecommerce', t('Site e-commerce', 'Tienda online', 'Online store')], ['abroad', t('Ramené de l’étranger', 'Traído del extranjero', 'Brought back from abroad')], ['other', t('Ailleurs', 'En otro lugar', 'Somewhere else')]] },
+  { id: 'budget', section: 'routine', type: 'single', title: t('Combien dépensez-vous environ par mois pour vos soins visage ?', '¿Cuánto gasta aproximadamente al mes en productos faciales?', 'Roughly how much do you spend on skincare each month?'), layout: 'one', fcfa: true, options: [
+    ['<5k', [null, 5000]], ['5-10k', [5000, 10000]], ['10-20k', [10000, 20000]], ['20-35k', [20000, 35000]], ['35k+', [35000, null]], ['unknown', UI.unknown]] },
 
-  {id:'categories', section:'buy', type:'multi', icons:true, title:'Qu’avez-vous acheté ces 6 derniers mois ?', hint:'Plusieurs choix possibles.', layout:'two', options:[['cleanser','Nettoyant visage',false,'','cleanser'],['serum','Sérum',false,'','serum'],['moisturizer','Crème hydratante',false,'','cream'],['sunscreen','Écran solaire',false,'','spf'],['mask','Masque',false,'','mask'],['exfoliant','Exfoliant, gommage',false,'','exfo'],['anti_aging','Soin anti-âge',false,'','age'],['body','Soin du corps',false,'','body'],['none','Aucun de ces produits',true,'exclusive','none']]},
+  { id: 'categories', section: 'buy', type: 'multi', icons: true, title: t('Qu’avez-vous acheté ces 6 derniers mois ?', '¿Qué ha comprado en los últimos 6 meses?', 'What have you bought in the last 6 months?'), hint: t('Plusieurs choix possibles.', 'Puede elegir varias.', 'Choose as many as apply.'), layout: 'two', options: [
+    ['cleanser', t('Nettoyant visage', 'Limpiador facial', 'Face cleanser'), false, '', 'cleanser'], ['serum', t('Sérum', 'Sérum', 'Serum'), false, '', 'serum'],
+    ['moisturizer', t('Crème hydratante', 'Crema hidratante', 'Moisturizer'), false, '', 'cream'], ['sunscreen', t('Écran solaire', 'Protector solar', 'Sunscreen'), false, '', 'spf'],
+    ['mask', t('Masque', 'Mascarilla', 'Face mask'), false, '', 'mask'], ['exfoliant', t('Exfoliant, gommage', 'Exfoliante', 'Exfoliator, scrub'), false, '', 'exfo'],
+    ['anti_aging', t('Soin anti-âge', 'Tratamiento antiedad', 'Anti-aging care'), false, '', 'age'], ['body', t('Soin du corps', 'Cuidado corporal', 'Body care'), false, '', 'body'],
+    ['none', t('Aucun de ces produits', 'Ninguno de estos', 'None of these'), true, 'exclusive', 'none']] },
 
-  {id:'brands', section:'world', type:'text', optional:true, title:'Quelles marques de skincare connaissez-vous ou utilisez-vous ?', hint:'Écrivez librement, même une seule marque.', placeholder:'Par exemple : les marques de votre salle de bain…', rows:3},
-  {id:'kbeauty', section:'world', type:'single', title:'Avez-vous déjà essayé des soins coréens ou asiatiques ?', hint:'Ce qu’on appelle parfois « K-beauty ».', layout:'one', options:[['regularly','Oui, régulièrement'],['sometimes','Oui, quelques fois'],['once','Une fois'],['aware','Je connais, mais je n’ai jamais essayé'],['never','Non, jamais, je ne connais pas']]},
+  { id: 'brands', section: 'world', type: 'text', optional: true, title: t('Quelles marques de skincare connaissez-vous ou utilisez-vous ?', '¿Qué marcas de cuidado de la piel conoce o usa?', 'Which skincare brands do you know or use?'), hint: t('Écrivez librement, même une seule marque.', 'Escriba libremente, aunque sea una sola marca.', 'Write freely, even just one brand.'), placeholder: t('Par exemple : les marques de votre salle de bain…', 'Por ejemplo: las marcas de su baño…', 'For example: the brands in your bathroom…'), rows: 3 },
+  { id: 'kbeauty', section: 'world', type: 'single', title: t('Avez-vous déjà essayé des soins coréens ou asiatiques ?', '¿Ha probado alguna vez productos coreanos o asiáticos?', 'Have you ever tried Korean or Asian skincare?'), hint: t('Ce qu’on appelle parfois « K-beauty ».', 'Lo que a veces se llama «K-beauty».', 'Sometimes called “K-beauty”.'), layout: 'one', options: [
+    ['regularly', t('Oui, régulièrement', 'Sí, con regularidad', 'Yes, regularly')], ['sometimes', t('Oui, quelques fois', 'Sí, algunas veces', 'Yes, a few times')], ['once', t('Une fois', 'Una vez', 'Once')],
+    ['aware', t('Je connais, mais je n’ai jamais essayé', 'Lo conozco, pero nunca lo he probado', 'I know of it but never tried it')], ['never', t('Non, jamais, je ne connais pas', 'No, nunca, no lo conozco', 'No, never heard of it')]] },
 
-  {id:'intro_first', section:'first', type:'intro'},
-  {id:'impression', section:'first', type:'single', image:'collection.jpg', title:'Quelle est votre première impression sur ces packagings ?', layout:'one', options:[['5','Très beaux'],['4','Beaux'],['3','Corrects'],['2','Peu attirants'],['1','Pas du tout attirants']]},
-  {id:'color', section:'first', type:'color', title:'Quelle couleur vous attire le plus ?'},
-  {id:'curious', section:'first', type:'product', title:'Quel produit vous donne le plus envie d’en savoir plus ?'},
-  {id:'beautiful', section:'first', type:'product', title:'Quel packaging trouvez-vous le plus beau ?'},
-  {id:'premium', section:'first', type:'product', title:'Lequel vous semble le plus haut de gamme ?'},
-  {id:'accessible', section:'first', type:'product', title:'Lequel vous semble le plus facile à acheter, pas trop cher ?'},
-  {id:'least', section:'first', type:'product', none:'Aucun en particulier', title:'Lequel vous attire le moins ?', hint:'Il n’y a pas de mauvaise réponse.'},
-  {id:'story', section:'first', type:'product', none:'Aucun', title:'Lequel auriez-vous envie de montrer en story ?'},
-  {id:'milk_ab', section:'first', type:'ab', title:'Pour une crème hydratante, quel format préférez-vous ?', hint:'Même produit, deux packagings possibles.'},
-  {id:'buy_now', section:'first', type:'buy', title:'Si vous deviez en acheter un aujourd’hui, lequel choisiriez-vous ?'},
+  { id: 'intro_first', section: 'first', type: 'intro' },
+  { id: 'impression', section: 'first', type: 'single', image: 'collection.jpg', title: t('Quelle est votre première impression sur ces packagings ?', '¿Cuál es su primera impresión de estos envases?', 'What’s your first impression of this packaging?'), layout: 'one', options: [
+    ['5', t('Très beaux', 'Muy bonitos', 'Very attractive')], ['4', t('Beaux', 'Bonitos', 'Attractive')], ['3', t('Corrects', 'Correctos', 'Okay')],
+    ['2', t('Peu attirants', 'Poco atractivos', 'Not very attractive')], ['1', t('Pas du tout attirants', 'Nada atractivos', 'Not attractive at all')]] },
+  { id: 'color', section: 'first', type: 'color', title: t('Quelle couleur vous attire le plus ?', '¿Qué color le atrae más?', 'Which colour appeals to you most?') },
+  { id: 'curious', section: 'first', type: 'product', title: t('Quel produit vous donne le plus envie d’en savoir plus ?', '¿Qué producto le despierta más curiosidad?', 'Which product makes you most curious?') },
+  { id: 'beautiful', section: 'first', type: 'product', title: t('Quel packaging trouvez-vous le plus beau ?', '¿Qué envase le parece más bonito?', 'Which packaging do you find most beautiful?') },
+  { id: 'premium', section: 'first', type: 'product', title: t('Lequel vous semble le plus haut de gamme ?', '¿Cuál le parece más de alta gama?', 'Which one looks the most premium?') },
+  { id: 'accessible', section: 'first', type: 'product', title: t('Lequel vous semble le plus facile à acheter, pas trop cher ?', '¿Cuál le parece más fácil de comprar, no demasiado caro?', 'Which one looks easiest to buy, not too expensive?') },
+  { id: 'least', section: 'first', type: 'product', none: t('Aucun en particulier', 'Ninguno en particular', 'None in particular'), title: t('Lequel vous attire le moins ?', '¿Cuál le atrae menos?', 'Which one appeals to you least?'), hint: t('Il n’y a pas de mauvaise réponse.', 'No hay respuestas incorrectas.', 'There’s no wrong answer.') },
+  { id: 'story', section: 'first', type: 'product', none: UI.none, title: t('Lequel auriez-vous envie de montrer en story ?', '¿Cuál le gustaría enseñar en sus stories?', 'Which one would you show off in your stories?') },
+  { id: 'milk_ab', section: 'first', type: 'ab', title: t('Pour une crème hydratante, quel format préférez-vous ?', 'Para una crema hidratante, ¿qué formato prefiere?', 'For a moisturizer, which format do you prefer?'), hint: t('Même produit, deux packagings possibles.', 'Mismo producto, dos envases posibles.', 'Same product, two possible packs.') },
+  { id: 'buy_now', section: 'first', type: 'buy', title: t('Si vous deviez en acheter un aujourd’hui, lequel choisiriez-vous ?', 'Si tuviera que comprar uno hoy, ¿cuál elegiría?', 'If you had to buy one today, which would you choose?') },
 
-  {id:'price_glow', section:'price', type:'price', product:'glow', image:'glow.jpg', size:'Sérum vitamine C · 30 ml', bands:[['<5k','Moins de 5 000'],['5-7k','5 000 – 7 000'],['7-9k','7 000 – 9 000'],['9-12k','9 000 – 12 000'],['12k+','Plus de 12 000'],['unknown','Je ne sais pas']]},
-  {id:'price_cloud', section:'price', type:'price', product:'cloud', image:'cloud.jpg', size:'Nettoyant gelée · 200 ml', bands:[['<3k','Moins de 3 000'],['3-5k','3 000 – 5 000'],['5-7k','5 000 – 7 000'],['7-9k','7 000 – 9 000'],['9k+','Plus de 9 000'],['unknown','Je ne sais pas']]},
+  { id: 'price_glow', section: 'price', type: 'price', product: 'glow', image: 'p-glow.jpg', size: t('Sérum vitamine C · 30 ml', 'Sérum de vitamina C · 30 ml', 'Vitamin C serum · 30 ml'),
+    bands: [['<5k', [null, 5000]], ['5-7k', [5000, 7000]], ['7-9k', [7000, 9000]], ['9-12k', [9000, 12000]], ['12k+', [12000, null]], ['unknown', UI.unknown]] },
+  { id: 'price_cloud', section: 'price', type: 'price', product: 'cloud', image: 'p-cloud.jpg', size: t('Nettoyant gelée · 200 ml', 'Limpiador en gel · 200 ml', 'Jelly cleanser · 200 ml'),
+    bands: [['<3k', [null, 3000]], ['3-5k', [3000, 5000]], ['5-7k', [5000, 7000]], ['7-9k', [7000, 9000]], ['9k+', [9000, null]], ['unknown', UI.unknown]] },
 
-  {id:'reaction', section:'intent', type:'single', title:'Si cette marque était disponible aujourd’hui, quelle serait votre réaction ?', layout:'one', options:[['would_buy','J’achèterais probablement'],['would_try','J’aimerais essayer'],['reviews_first','Je regarderais d’abord les avis'],['compare','Je comparerais avec d’autres marques'],['not_interested','Je ne serais pas intéressée']]},
-  {id:'drivers', section:'intent', type:'multi', max:3, title:'Qu’est-ce qui vous ferait vraiment acheter ?', hint:'Jusqu’à 3 choix.', layout:'two', options:[['price','Le prix'],['efficacy','L’efficacité'],['ingredients','Les ingrédients'],['packaging','Le packaging'],['reviews','Les avis clients'],['word_of_mouth','Les recommandations de proches'],['creators','Les créatrices de contenu'],['availability','La disponibilité près de chez moi'],['origin','L’origine de la marque'],['promo','Les promotions'],['texture','La texture, le parfum',true]]},
-  {id:'dream', section:'intent', type:'text', optional:true, title:'Si vous pouviez créer le soin parfait pour vous, que devrait-il absolument faire ?', hint:'Une phrase suffit. C’est la question la plus utile pour nous.', placeholder:'Il devrait…', rows:5}
+  { id: 'reaction', section: 'intent', type: 'single', title: t('Si cette marque était disponible aujourd’hui, quelle serait votre réaction ?', 'Si esta marca estuviera disponible hoy, ¿cuál sería su reacción?', 'If this brand were available today, how would you react?'), layout: 'one', options: [
+    ['would_buy', t('J’achèterais probablement', 'Probablemente la compraría', 'I’d probably buy it')], ['would_try', t('J’aimerais essayer', 'Me gustaría probarla', 'I’d like to try it')],
+    ['reviews_first', t('Je regarderais d’abord les avis', 'Primero miraría las opiniones', 'I’d check reviews first')], ['compare', t('Je comparerais avec d’autres marques', 'La compararía con otras marcas', 'I’d compare it with other brands')],
+    ['not_interested', t('Je ne serais pas intéressée', 'No me interesaría', 'I wouldn’t be interested')]] },
+  { id: 'drivers', section: 'intent', type: 'multi', max: 3, title: t('Qu’est-ce qui vous ferait vraiment acheter ?', '¿Qué le haría comprar de verdad?', 'What would really make you buy?'), hint: UPTO3, layout: 'two', options: [
+    ['price', t('Le prix', 'El precio', 'The price')], ['efficacy', t('L’efficacité', 'La eficacia', 'Results')], ['ingredients', t('Les ingrédients', 'Los ingredientes', 'Ingredients')],
+    ['packaging', t('Le packaging', 'El envase', 'Packaging')], ['reviews', t('Les avis clients', 'Las opiniones de clientas', 'Customer reviews')],
+    ['word_of_mouth', t('Les recommandations de proches', 'Recomendaciones de conocidas', 'Recommendations from people I know')], ['creators', t('Les créatrices de contenu', 'Las creadoras de contenido', 'Content creators')],
+    ['availability', t('La disponibilité près de chez moi', 'Que esté disponible cerca de mí', 'Availability near me')], ['origin', t('L’origine de la marque', 'El origen de la marca', 'Where the brand comes from')],
+    ['promo', t('Les promotions', 'Las promociones', 'Promotions')], ['texture', t('La texture, le parfum', 'La textura, el aroma', 'Texture, scent'), true]] },
+  { id: 'dream', section: 'intent', type: 'text', optional: true, title: t('Si vous pouviez créer le soin parfait pour vous, que devrait-il absolument faire ?', 'Si pudiera crear el producto perfecto para usted, ¿qué debería hacer sí o sí?', 'If you could create the perfect skincare product for you, what would it absolutely have to do?'), hint: t('Une phrase suffit. C’est la question la plus utile pour nous.', 'Basta con una frase. Es la pregunta más útil para nosotros.', 'One sentence is enough. It’s the most useful question for us.'), placeholder: t('Il devrait…', 'Debería…', 'It should…'), rows: 5 }
 ];
 const NUMBERED = Q.filter(q => q.type !== 'intro');
 const TOTAL = NUMBERED.length;
 
+/* option label: plain translation, or an FCFA band [lo, hi] */
+const optLabel = (l, fcfa) => Array.isArray(l) ? band(l[0], l[1]) + (fcfa ? ' FCFA' : '') : L(l);
+
 /* ---------- state ---------- */
-const S = { i: -1, answers: {}, startedAt: null, done: false, minor: false, dir: 1 };
+const S = { i: -1, answers: {}, startedAt: null, done: false, minor: false, dir: 1, langAtStart: null };
 const app = document.getElementById('app');
-const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const setAccent = (c) => { const r = document.documentElement.style; r.setProperty('--accent', `var(--${c})`); r.setProperty('--accent-t', `var(--${c}-t)`); };
+document.documentElement.lang = LANG;
 
 /* ---------- rendering helpers ---------- */
 function header(q) {
-  const n = NUMBERED.indexOf(q) + 1;
-  const pct = q.type === 'intro' ? (NUMBERED.indexOf(Q[S.i + 1]) / TOTAL) * 100 : (n / TOTAL) * 100;
-  const label = q.type === 'intro' ? '' : `${String(n).padStart(2,'0')} / ${TOTAL}`;
+  const k = NUMBERED.indexOf(q) + 1;
+  const pct = q.type === 'intro' ? (NUMBERED.indexOf(Q[S.i + 1]) / TOTAL) * 100 : (k / TOTAL) * 100;
+  const label = q.type === 'intro' ? '' : `${String(k).padStart(2, '0')} / ${TOTAL}`;
   return `<div class="top">
     <div class="top-row">
-      <button class="back" id="btn-back" aria-label="Question précédente">${BACK}</button>
+      <button class="back" id="btn-back" aria-label="${esc(L(UI.back))}">${BACK}</button>
       ${WM('#46222F', 64)}
-      <span class="count" aria-label="Question ${n} sur ${TOTAL}">${label}</span>
+      <span class="count">${label}</span>
     </div>
     <div class="bar" aria-hidden="true"><i style="width:${pct}%"></i><b style="left:${pct}%"></b></div>
   </div>`;
 }
 function kicker(q) { const s = SECTION[q.section]; return `<span class="kicker"><span class="dot"></span>${s.n} — ${esc(s.t)}</span>`; }
-function optBtn(key, val, label, selected, extra = '', sub = '') {
-  label = String(label).replace(/(\d) (\d)/g, '$1\u00A0$2');
-  return `<button type="button" class="opt ${extra}" data-key="${key}" data-val="${esc(val)}" aria-pressed="${selected}"><span class="lbl">${esc(label)}${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</span><span class="mark">${CHECK}</span></button>`;
+function optBtn(key, val, label, selected, extra = '') {
+  label = String(label).replace(/(\d) (\d)/g, '$1 $2');
+  return `<button type="button" class="opt ${extra}" data-key="${key}" data-val="${esc(val)}" aria-pressed="${selected}"><span class="lbl">${esc(label)}</span><span class="mark">${CHECK}</span></button>`;
 }
-function optionsGrid(key, opts, layout, isSelected, iconMode) {
+function optionsGrid(key, opts, layout, isSelected, iconMode, fcfa) {
   return `<div class="opts ${layout === 'two' ? 'two' : ''}">${opts.map(([v, l, wide, , ico]) => {
-    const sel = isSelected(v);
-    if (iconMode) return `<button type="button" class="opt icon ${wide ? 'wide' : ''}" data-key="${key}" data-val="${esc(v)}" aria-pressed="${sel}"><span class="ico">${ICONS[ico]}</span><span class="lbl">${esc(l)}</span><span class="mark">${CHECK}</span></button>`;
-    return optBtn(key, v, l, sel, wide && layout === 'two' ? 'wide' : '');
+    const sel = isSelected(v), lab = optLabel(l, fcfa);
+    if (iconMode) return `<button type="button" class="opt icon ${wide ? 'wide' : ''}" data-key="${key}" data-val="${esc(v)}" aria-pressed="${sel}"><span class="ico">${ICONS[ico]}</span><span class="lbl">${esc(lab)}</span><span class="mark">${CHECK}</span></button>`;
+    return optBtn(key, v, lab, sel, wide && layout === 'two' ? 'wide' : '');
   }).join('')}</div>`;
 }
 function tile(key, id, sel) {
   const p = P(id);
-  return `<button type="button" class="tile" data-key="${key}" data-val="${id}" aria-pressed="${sel}"><img src="${CONFIG.IMG}p-${id}.jpg" alt="${esc(p.name)}, ${esc(p.fn)}" loading="lazy"><span class="cap"><span><span class="nm">${esc(p.name)}</span><span class="fn">${esc(p.fn)}</span></span><span class="mark">${CHECK}</span></span></button>`;
+  return `<button type="button" class="tile" data-key="${key}" data-val="${id}" aria-pressed="${sel}"><img src="${CONFIG.IMG}p-${id}.jpg" alt="${esc(p.name)}, ${esc(L(p.fn))}" loading="lazy"><span class="cap"><span><span class="nm">${esc(p.name)}</span><span class="fn">${esc(L(p.fn))}</span></span><span class="mark">${CHECK}</span></span></button>`;
 }
 function noneTile(key, label, sel) {
-  return `<button type="button" class="tile none" data-key="${key}" data-val="none" aria-pressed="${sel}"><span class="nm">${esc(label)}</span></button>`;
+  return `<button type="button" class="tile none" data-key="${key}" data-val="none" aria-pressed="${sel}"><span class="nm">${esc(L(label))}</span></button>`;
 }
 function footer(label, enabled, opts = {}) {
   return `<div class="foot">
     ${opts.counter !== undefined ? `<div class="counter" id="counter">${opts.counter}</div>` : ''}
-    <button type="button" class="cta" id="btn-next" ${enabled ? '' : 'disabled'}>${esc(label)} ${ARROW}</button>
-    ${opts.skip ? `<button type="button" class="skip" id="btn-skip">${esc(opts.skip)}</button>` : ''}
+    <button type="button" class="cta" id="btn-next" ${enabled ? '' : 'disabled'}>${esc(L(label))} ${ARROW}</button>
+    ${opts.skip ? `<button type="button" class="skip" id="btn-skip">${esc(L(UI.skip))}</button>` : ''}
   </div>`;
+}
+function langSwitch() {
+  return `<div class="langs" role="group" aria-label="${esc(L(UI.langLabel))}">${LANGS.map(l => `<button type="button" class="lang" data-lang="${l}" aria-pressed="${l === LANG}" lang="${l}">${l.toUpperCase()}</button>`).join('')}</div>`;
 }
 
 /* ---------- screens ---------- */
 function renderCover() {
   setAccent('pink');
   app.innerHTML = `<section class="cover">
+    <div class="cover-top">${langSwitch()}</div>
     <div class="art" aria-hidden="true">
       <div class="blob" style="width:230px;height:230px;left:-40px;top:6px;background:var(--pink)"></div>
       <div class="blob" style="width:150px;height:150px;left:150px;top:0;background:var(--lilac);opacity:.85"></div>
@@ -336,13 +465,19 @@ function renderCover() {
     </div>
     ${WM('#46222F', 210)}
     <p class="tag">LESS NOISE.<br>MORE GLOW.</p>
-    <p class="lede">On prépare quelque chose pour votre peau.</p>
-    <p class="body">2 minutes. Quelques questions sur votre routine beauté, vos habitudes et ce que vous aimeriez vraiment trouver en skincare.</p>
-    <div class="meta"><span class="pill">${TOTAL} questions</span><span class="pill">Anonyme</span><span class="pill">Environ 2 à 3 min</span></div>
-    ${LIVE ? '' : '<div class="demo">Aperçu : les réponses ne sont pas enregistrées dans cette version.</div>'}
+    <p class="lede">${esc(L(UI.lede))}</p>
+    <p class="body">${esc(L(UI.intro))}</p>
+    <div class="meta"><span class="pill">${TOTAL} ${esc(L(UI.nQuestions))}</span><span class="pill">${esc(L(UI.anon))}</span><span class="pill">${esc(L(UI.time))}</span></div>
+    ${LIVE ? '' : `<div class="demo">${esc(L(UI.demo))}</div>`}
   </section>
   <div class="foot"><button type="button" class="cta soft" id="btn-start">LET’S GLOW ${ARROW}</button></div>`;
+  app.querySelectorAll('.lang').forEach(b => b.onclick = () => setLang(b.dataset.lang));
   document.getElementById('btn-start').onclick = () => { S.startedAt = S.startedAt || new Date().toISOString(); go(0, 1); };
+}
+function setLang(l) {
+  if (!LANGS.includes(l) || l === LANG) return;
+  LANG = l; document.documentElement.lang = l;
+  if (S.i < 0) renderCover(); else renderQuestion();
 }
 
 function renderQuestion() {
@@ -353,86 +488,87 @@ function renderQuestion() {
 
   if (q.type === 'intro') {
     inner = `<span class="kicker"><span class="dot"></span>05 — First impression</span>
-      <h1 class="q">Imaginez que vous voyez ces produits pour la première fois.</h1>
-      <p class="hint">Sur Instagram ou dans une boutique. Répondez à l’instinct : il n’y a ni bonne ni mauvaise réponse.</p>
-      <div class="hero-img"><img src="${CONFIG.IMG}collection.jpg" alt="Cinq produits de soin : nettoyant rose, sérum pêche, sérum lilas, crème jaune, protection solaire ivoire"></div>`;
-    foot = footer('Je regarde', true);
+      <h1 class="q">${esc(L(UI.firstTitle))}</h1>
+      <p class="hint">${esc(L(UI.firstHint))}</p>
+      <div class="hero-img"><img src="${CONFIG.IMG}collection.jpg" alt="${esc(L(UI.collectionAlt))}"></div>`;
+    foot = footer(UI.firstCta, true);
   }
 
   if (q.type === 'single') {
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
-      ${q.image ? `<div class="hero-img"><img src="${CONFIG.IMG}${q.image}" alt="Les cinq produits"></div>` : ''}
-      ${optionsGrid(q.id, q.options, q.layout, v => A[q.id] === v)}`;
-    foot = footer('Continuer', !!A[q.id]);
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>${q.hint ? `<p class="hint">${esc(L(q.hint))}</p>` : ''}
+      ${q.image ? `<div class="hero-img"><img src="${CONFIG.IMG}${q.image}" alt="${esc(L(UI.collectionAlt))}"></div>` : ''}
+      ${optionsGrid(q.id, q.options, q.layout, v => A[q.id] === v, false, q.fcfa)}`;
+    foot = footer(UI.next, !!A[q.id]);
   }
 
   if (q.type === 'multi') {
     const cur = A[q.id] || [];
     const isNone = cur.some(v => (q.options.find(o => o[0] === v) || [])[3] === 'exclusive');
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>${q.hint ? `<p class="hint">${esc(L(q.hint))}</p>` : ''}
       ${optionsGrid(q.id, q.options, q.layout, v => cur.includes(v), q.icons)}`;
-    const counter = q.max ? `${cur.length} / ${q.max} sélectionné${cur.length > 1 ? 's' : ''}` : (cur.length ? `${cur.length} sélectionné${cur.length > 1 ? 's' : ''}` : '');
-    foot = footer('Continuer', cur.length > 0, { counter: isNone ? '' : counter });
+    const counter = cur.length ? (q.max ? `${cur.length} / ${q.max} ${L(UI.selected)}` : `${cur.length} ${L(UI.selected)}`) : '';
+    foot = footer(UI.next, cur.length > 0, { counter: isNone ? '' : counter });
   }
 
   if (q.type === 'groups') {
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>
-      ${q.groups.map(g => `<div class="group-label" id="lbl-${g.key}">${esc(g.label)}</div>${optionsGrid(g.key, g.options, g.layout, v => A[g.key] === v).replace('class="opts', `role="group" aria-labelledby="lbl-${g.key}" class="opts`)}`).join('')}`;
-    foot = footer('Continuer', q.groups.every(g => A[g.key]));
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>
+      ${q.groups.map(g => `<div class="group-label" id="lbl-${g.key}">${esc(L(g.label))}</div>${optionsGrid(g.key, g.options, g.layout, v => A[g.key] === v).replace('class="opts', `role="group" aria-labelledby="lbl-${g.key}" class="opts`)}`).join('')}`;
+    foot = footer(UI.next, q.groups.every(g => A[g.key]));
   }
 
   if (q.type === 'text') {
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
-      <div class="field"><label for="txt-${q.id}" class="sr">${esc(q.title)}</label>
-      <textarea id="txt-${q.id}" rows="${q.rows || 4}" maxlength="600" placeholder="${esc(q.placeholder || '')}">${esc(A[q.id] || '')}</textarea></div>`;
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>${q.hint ? `<p class="hint">${esc(L(q.hint))}</p>` : ''}
+      <div class="field"><label for="txt-${q.id}" class="sr">${esc(L(q.title))}</label>
+      <textarea id="txt-${q.id}" rows="${q.rows || 4}" maxlength="600" placeholder="${esc(L(q.placeholder) || '')}">${esc(A[q.id] || '')}</textarea></div>`;
     const last = S.i === Q.length - 1;
-    foot = footer(last ? 'Envoyer mes réponses' : 'Continuer', !!(A[q.id] || '').trim(), { skip: q.optional ? 'Passer cette question' : '' });
+    foot = footer(last ? UI.send : UI.next, !!(A[q.id] || '').trim(), { skip: q.optional });
   }
 
   if (q.type === 'color') {
     const cols = ORDER.colors.map(id => COLORS.find(c => c.id === id));
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>
-      <div class="swatches" role="group" aria-label="Couleurs">${cols.map((c, i) => `<button type="button" class="sw ${i === cols.length - 1 ? 'last' : ''}" style="background:${c.hex};${c.id === 'ivory' ? 'border-color:rgba(70,34,47,.16);' : ''}" data-key="${q.id}" data-val="${c.id}" aria-pressed="${A[q.id] === c.id}"><span class="lbl">${esc(c.label)}</span><span class="mark">${CHECK}</span></button>`).join('')}</div>`;
-    foot = footer('Continuer', !!A[q.id]);
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>
+      <div class="swatches" role="group">${cols.map((c, i) => `<button type="button" class="sw ${i === cols.length - 1 ? 'last' : ''}" style="background:${c.hex};${c.id === 'ivory' ? 'border-color:rgba(70,34,47,.16);' : ''}" data-key="${q.id}" data-val="${c.id}" aria-pressed="${A[q.id] === c.id}"><span class="lbl">${esc(L(c.label))}</span><span class="mark">${CHECK}</span></button>`).join('')}</div>`;
+    foot = footer(UI.next, !!A[q.id]);
   }
 
   if (q.type === 'product') {
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
-      <div class="tiles" role="group" aria-label="Produits">${ORDER.products.map(id => tile(q.id, id, A[q.id] === id)).join('')}${q.none ? noneTile(q.id, q.none, A[q.id] === 'none') : ''}</div>`;
-    foot = footer('Continuer', !!A[q.id]);
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>${q.hint ? `<p class="hint">${esc(L(q.hint))}</p>` : ''}
+      <div class="tiles" role="group">${ORDER.products.map(id => tile(q.id, id, A[q.id] === id)).join('')}${q.none ? noneTile(q.id, q.none, A[q.id] === 'none') : ''}</div>`;
+    foot = footer(UI.next, !!A[q.id]);
   }
 
   if (q.type === 'ab') {
     const order = S.abOrder || (S.abOrder = shuffle(['a', 'b']));
     const img = { a: 'p-milk.jpg', b: 'milk-b.jpg' };
-    const lab = { a: 'Pot à dôme', b: 'Flacon pompe' };
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1><p class="hint">${esc(q.hint)}</p>
-      <div class="tiles ab" role="group" aria-label="Formats">${order.map((k, i) => `<button type="button" class="tile" data-key="${q.id}" data-val="${k}" aria-pressed="${A[q.id] === k}"><img src="${CONFIG.IMG}${img[k]}" alt="Format ${i + 1} : ${lab[k]}"><span class="cap"><span><span class="nm">FORMAT ${i + 1}</span><span class="fn">${lab[k]}</span></span><span class="mark">${CHECK}</span></span></button>`).join('')}</div>
-      <div class="opts">${optBtn(q.id, 'none', 'Aucune préférence', A[q.id] === 'none', 'chip')}</div>`;
-    foot = footer('Continuer', !!A[q.id]);
+    const lab = { a: L(UI.dome), b: L(UI.pump) };
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1><p class="hint">${esc(L(q.hint))}</p>
+      <div class="tiles ab" role="group">${order.map((k, i) => `<button type="button" class="tile" data-key="${q.id}" data-val="${k}" aria-pressed="${A[q.id] === k}"><img src="${CONFIG.IMG}${img[k]}" alt="${esc(L(UI.format))} ${i + 1} : ${esc(lab[k])}"><span class="cap"><span><span class="nm">${esc(L(UI.format))} ${i + 1}</span><span class="fn">${esc(lab[k])}</span></span><span class="mark">${CHECK}</span></span></button>`).join('')}</div>
+      <div class="opts">${optBtn(q.id, 'none', L(UI.noPref), A[q.id] === 'none', 'chip')}</div>`;
+    foot = footer(UI.next, !!A[q.id]);
   }
 
   if (q.type === 'buy') {
     const pick = A.buy_now;
-    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>
-      <div class="tiles" role="group" aria-label="Produits">${ORDER.products.map(id => tile('buy_now', id, pick === id)).join('')}${noneTile('buy_now', 'Aucun', pick === 'none')}</div>
-      ${pick && pick !== 'none' ? `<div class="group-label" id="lbl-lk">À quel point seriez-vous susceptible de l’acheter ?</div>
-      <div class="scale" role="group" aria-labelledby="lbl-lk"><div class="scale-row">${[1,2,3,4,5].map(n => `<button type="button" class="dotbtn" data-key="buy_likelihood" data-val="${n}" aria-pressed="${A.buy_likelihood === String(n)}" aria-label="${n} sur 5">${n}</button>`).join('')}</div>
-      <div class="scale-ends"><span>Pas du tout</span><span>Certainement</span></div></div>` : ''}`;
-    foot = footer('Continuer', pick === 'none' || (pick && A.buy_likelihood));
+    inner = `${kicker(q)}<h1 class="q">${esc(L(q.title))}</h1>
+      <div class="tiles" role="group">${ORDER.products.map(id => tile('buy_now', id, pick === id)).join('')}${noneTile('buy_now', UI.none, pick === 'none')}</div>
+      ${pick && pick !== 'none' ? `<div class="group-label" id="lbl-lk">${esc(L(UI.likely))}</div>
+      <div class="scale" role="group" aria-labelledby="lbl-lk"><div class="scale-row">${[1, 2, 3, 4, 5].map(k => `<button type="button" class="dotbtn" data-key="buy_likelihood" data-val="${k}" aria-pressed="${A.buy_likelihood === String(k)}" aria-label="${k} / 5">${k}</button>`).join('')}</div>
+      <div class="scale-ends"><span>${esc(L(UI.notAtAll))}</span><span>${esc(L(UI.definitely))}</span></div></div>` : ''}`;
+    foot = footer(UI.next, pick === 'none' || (pick && A.buy_likelihood));
   }
 
   if (q.type === 'price') {
     const p = P(q.product);
     const k1 = q.id + '_reasonable', k2 = q.id + '_too_expensive';
-    inner = `${kicker(q)}<h1 class="q">Parlons prix.</h1>
-      <div class="prod-head"><img src="${CONFIG.IMG}${q.image}" alt="${esc(p.name)}"><div><div class="nm">${esc(p.name)}</div><div class="fn">${esc(q.size)}</div></div></div>
-      <div class="group-label" id="lbl-${k1}">Quel prix vous semblerait raisonnable ?</div>
-      <div class="opts two" role="group" aria-labelledby="lbl-${k1}">${q.bands.map(([v, l]) => optBtn(k1, v, v === 'unknown' ? l : l + ' F', A[k1] === v, 'chip')).join('')}</div>
-      <div class="group-label" id="lbl-${k2}">À partir de quel prix ce serait trop cher ?</div>
-      <div class="opts two" role="group" aria-labelledby="lbl-${k2}">${q.bands.map(([v, l]) => optBtn(k2, v, v === 'unknown' ? l : l + ' F', A[k2] === v, 'chip')).join('')}</div>
-      <p class="hint" style="margin-top:14px">Prix en FCFA.</p>`;
-    foot = footer('Continuer', !!(A[k1] && A[k2]));
+    const chips = (key) => q.bands.map(([v, l]) => optBtn(key, v, optLabel(l, false), A[key] === v, 'chip')).join('');
+    inner = `${kicker(q)}<h1 class="q">${esc(L(UI.priceTitle))}</h1>
+      <div class="prod-head"><img src="${CONFIG.IMG}${q.image}" alt="${esc(p.name)}"><div><div class="nm">${esc(p.name)}</div><div class="fn">${esc(L(q.size))}</div></div></div>
+      <div class="group-label" id="lbl-${k1}">${esc(L(UI.priceOk))}</div>
+      <div class="opts two" role="group" aria-labelledby="lbl-${k1}">${chips(k1)}</div>
+      <div class="group-label" id="lbl-${k2}">${esc(L(UI.priceHigh))}</div>
+      <div class="opts two" role="group" aria-labelledby="lbl-${k2}">${chips(k2)}</div>
+      <p class="hint" style="margin-top:14px">${esc(L(UI.priceNote))}</p>`;
+    foot = footer(UI.next, !!(A[k1] && A[k2]));
   }
 
   app.innerHTML = header(q) + `<section class="screen ${S.dir < 0 ? 'back-anim' : ''}">${inner}</section>` + foot;
@@ -443,16 +579,13 @@ function renderQuestion() {
 /* ---------- interactions ---------- */
 let autoTimer = null;
 function bind(q) {
-  const back = document.getElementById('btn-back');
-  back.onclick = () => go(S.i - 1, -1);
+  document.getElementById('btn-back').onclick = () => go(S.i - 1, -1);
   const next = document.getElementById('btn-next');
   if (next) next.onclick = () => advance(q);
   const skip = document.getElementById('btn-skip');
-  if (skip) skip.onclick = () => { S.answers[q.id] = ''; advance(q, true); };
-
+  if (skip) skip.onclick = () => { S.answers[q.id] = ''; advance(q); };
   const ta = app.querySelector('textarea');
   if (ta) ta.addEventListener('input', () => { S.answers[q.id] = ta.value; next.disabled = !ta.value.trim(); });
-
   app.querySelectorAll('[data-key]').forEach(btn => btn.addEventListener('click', () => choose(q, btn.dataset.key, btn.dataset.val)));
 }
 
@@ -467,7 +600,7 @@ function choose(q, key, val) {
     else if (exclusive) cur = [val];
     else {
       cur = cur.filter(v => (q.options.find(o => o[0] === v) || [])[3] !== 'exclusive');
-      if (q.max && cur.length >= q.max) { flashCounter(`Maximum ${q.max} choix. Retirez-en un pour en ajouter un autre.`); return; }
+      if (q.max && cur.length >= q.max) { flashCounter(L(UI.maxMsg).replace('{m}', q.max)); return; }
       cur.push(val);
     }
     A[key] = cur;
@@ -477,7 +610,6 @@ function choose(q, key, val) {
   if (key === 'buy_now' && A.buy_now !== val) delete A.buy_likelihood;
   A[key] = val;
   renderQuestion();
-  // single-tap questions move on by themselves
   const auto = ['single', 'color', 'product', 'ab'].includes(q.type) || (q.type === 'buy' && (key === 'buy_likelihood' || val === 'none'));
   if (auto) autoTimer = setTimeout(() => advance(q), 380);
 }
@@ -506,7 +638,7 @@ function payload() {
     duration_sec: Math.round((Date.parse(submittedAt) - Date.parse(S.startedAt)) / 1000),
     country: A.country || null,
     age: A.age || null,
-    lang: 'fr',
+    lang: LANG,
     display_order: { products: ORDER.products, colors: ORDER.colors, milk_ab: S.abOrder || null },
     answers: A
   };
@@ -514,45 +646,42 @@ function payload() {
 async function submit() {
   const data = payload();
   S.done = true;
-  let saved = false, error = '';
+  let saved = false;
   if (LIVE) {
-    try {
-      const r = await post('/response', data);
-      saved = r.ok; if (!r.ok) error = 'status ' + r.status;
-    } catch (e) { error = 'network'; }
+    try { const r = await post('/response', data); saved = r.ok; } catch (e) { saved = false; }
   }
-  renderEnd(data, saved, error);
+  renderEnd(data, saved);
 }
 
-function renderEnd(data, saved, error) {
+function renderEnd(data, saved) {
   setAccent('pink');
   app.innerHTML = `<section class="cover" style="padding-top:44px">
     ${WM('#46222F', 150)}
     <h1 class="q" style="font-family:var(--f-label);font-weight:500;font-size:26px;line-height:1.2;letter-spacing:.02em;margin-top:34px">THANK YOU,<br>GLOW GIRL.</h1>
-    <p class="body" style="font-size:17px;color:var(--ink)">Vos réponses vont nous aider à créer quelque chose que vous aurez réellement envie d’utiliser.</p>
-    ${LIVE && !saved ? `<div class="demo">Vos réponses n’ont pas pu être envoyées (connexion). <button type="button" class="skip" id="btn-retry" style="display:inline;margin:0;padding:0">Réessayer</button></div>` : ''}
+    <p class="body" style="font-size:17px;color:var(--ink)">${esc(L(UI.endBody))}</p>
+    ${LIVE && !saved ? `<div class="demo">${esc(L(UI.sendFail))} <button type="button" class="skip" id="btn-retry" style="display:inline;margin:0;padding:0">${esc(L(UI.retry))}</button></div>` : ''}
     <div class="wait">
-      <h3>Être prévenue du lancement</h3>
-      <p>Facultatif. Laissez votre numéro WhatsApp si vous voulez recevoir un message au lancement. Il est enregistré séparément de vos réponses.</p>
-      <div class="field" style="margin-top:12px"><label for="wa">Numéro WhatsApp, avec indicatif</label><input type="tel" id="wa" inputmode="tel" autocomplete="tel" placeholder="+241 …"></div>
-      <label class="check"><input type="checkbox" id="wa-ok"> J’accepte d’être contactée par WhatsApp au sujet du lancement. Je peux me désinscrire à tout moment.</label>
-      <button type="button" class="cta" id="btn-wa" style="margin-top:14px" disabled>M’inscrire</button>
+      <h3>${esc(L(UI.waitTitle))}</h3>
+      <p>${esc(L(UI.waitBody))}</p>
+      <div class="field" style="margin-top:12px"><label for="wa">${esc(L(UI.waitLabel))}</label><input type="tel" id="wa" inputmode="tel" autocomplete="tel" placeholder="+241 …"></div>
+      <label class="check"><input type="checkbox" id="wa-ok"> ${esc(L(UI.waitConsent))}</label>
+      <button type="button" class="cta" id="btn-wa" style="margin-top:14px" disabled>${esc(L(UI.waitBtn))}</button>
       <div class="ok" id="wa-msg" role="status"></div>
     </div>
     <div style="display:flex;align-items:center;gap:14px;margin-top:30px">${RING('#F2A7B8', 40)}<p class="tag" style="margin:0;font-size:16px">LESS NOISE.<br>MORE GLOW.</p></div>
-    ${LIVE ? '' : `<details class="json"><summary>Aperçu : voir les données qui seraient enregistrées</summary><pre>${esc(JSON.stringify(data, null, 2))}</pre></details>`}
+    ${LIVE ? '' : `<details class="json"><summary>${esc(L(UI.jsonSummary))}</summary><pre>${esc(JSON.stringify(data, null, 2))}</pre></details>`}
   </section>`;
   const wa = document.getElementById('wa'), ok = document.getElementById('wa-ok'), b = document.getElementById('btn-wa'), msg = document.getElementById('wa-msg');
   const valid = () => { b.disabled = !(ok.checked && wa.value.replace(/\D/g, '').length >= 8); };
   wa.addEventListener('input', valid); ok.addEventListener('change', valid);
   b.onclick = async () => {
     b.disabled = true;
-    if (!LIVE) { msg.textContent = 'Aperçu : numéro non enregistré.'; return; }
+    if (!LIVE) { msg.textContent = L(UI.waitPreview); return; }
     try {
       const r = await post('/waitlist', { phone: wa.value.trim(), country: data.country, consent: true, version: CONFIG.VERSION });
-      msg.textContent = r.ok ? 'C’est noté. À très vite.' : 'L’inscription n’a pas fonctionné. Réessayez dans un instant.';
+      msg.textContent = r.ok ? L(UI.waitOk) : L(UI.waitFail);
       if (!r.ok) b.disabled = false;
-    } catch (e) { msg.textContent = 'Pas de connexion. Réessayez dans un instant.'; b.disabled = false; }
+    } catch (e) { msg.textContent = L(UI.offline); b.disabled = false; }
   };
   const retry = document.getElementById('btn-retry');
   if (retry) retry.onclick = submit;
@@ -563,11 +692,11 @@ function renderMinor() {
   setAccent('pink');
   app.innerHTML = `<section class="cover" style="padding-top:44px">
     ${WM('#46222F', 150)}
-    <h1 class="q" style="margin-top:30px">Merci beaucoup.</h1>
-    <p class="body" style="font-size:17px;color:var(--ink)">Ce questionnaire s’adresse aux personnes de 18 ans et plus. Aucune de vos réponses n’a été enregistrée.</p>
+    <h1 class="q" style="margin-top:30px">${esc(L(UI.minorTitle))}</h1>
+    <p class="body" style="font-size:17px;color:var(--ink)">${esc(L(UI.minorBody))}</p>
     <div style="display:flex;align-items:center;gap:14px;margin-top:30px">${RING('#F2A7B8', 40)}<p class="tag" style="margin:0;font-size:16px">LESS NOISE.<br>MORE GLOW.</p></div>
   </section>
-  <div class="foot"><button type="button" class="cta soft" id="btn-fix">Je me suis trompée d’âge</button></div>`;
+  <div class="foot"><button type="button" class="cta soft" id="btn-fix">${esc(L(UI.minorBtn))}</button></div>`;
   document.getElementById('btn-fix').onclick = () => { delete S.answers.age; S.minor = false; go(0, -1); };
 }
 
