@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NOA Glow Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: one mobile column (max 460px) centred on ivory; one question per screen; sticky header with progress, sticky footer CTA. */
+:root{
+  --pink:#F2A7B8; --peach:#F6B48F; --lilac:#C986E4; --butter:#F4D96B; --ivory:#F7F1E8;
+  --pink-t:#FCE6EC; --peach-t:#FDEADF; --lilac-t:#F3E4FA; --butter-t:#FCF3CF;
+  --ink:#46222F; --ink-2:#6E5560; --line:rgba(70,34,47,.12); --card:#FFFCF7; --deep:#A8345C;
+  --accent:var(--pink); --accent-t:var(--pink-t);
+  --f-display:'Instrument Serif', 'Times New Roman', serif;
+  --f-label:'Unbounded', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --f-body:'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ivory);color:var(--ink);font-family:var(--f-body);font-size:16px;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ivory)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--deep);outline-offset:3px;border-radius:14px}
+
+.stage{min-height:100%;display:flex;justify-content:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{position:relative;width:100%;max-width:460px;min-height:100%;display:flex;flex-direction:column}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ivory);padding-block:14px 10px;display:flex;flex-direction:column;gap:10px}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.back{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.back[disabled]{visibility:hidden}
+.count{font-family:var(--f-label);font-size:12px;letter-spacing:.14em;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.bar{position:relative;height:6px;border-radius:999px;background:rgba(70,34,47,.08);overflow:visible}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--accent);transition:width .45s cubic-bezier(.2,.8,.2,1)}
+.bar b{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--ivory);transition:left .45s cubic-bezier(.2,.8,.2,1)}
+
+/* screen */
+.screen{flex:1;display:flex;flex-direction:column;padding-block:8px 24px;animation:in .38s cubic-bezier(.2,.8,.2,1) both}
+.screen.back-anim{animation-name:inBack}
+@keyframes in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes inBack{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-label);font-weight:500;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink)}
+.kicker .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.q{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,8.4vw,38px);line-height:1.06;letter-spacing:-.005em;margin:14px 0 0;text-wrap:balance}
+.hint{margin:10px 0 0;font-size:15px;line-height:1.45;color:var(--ink-2)}
+.group-label{margin:26px 0 10px;font-family:var(--f-label);font-weight:500;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+
+/* options */
+.opts{display:grid;gap:10px;margin-top:22px}
+.opts.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.opt{position:relative;display:flex;align-items:center;gap:14px;min-height:58px;padding:14px 18px;border-radius:22px;background:var(--card);border:1.5px solid var(--line);box-shadow:0 1px 0 rgba(70,34,47,.04),0 6px 16px -12px rgba(70,34,47,.25);text-align:left;cursor:pointer;transition:transform .15s ease,background .2s ease,border-color .2s ease}
+.opt:active{transform:scale(.98)}
+.opt .lbl{flex:1;min-width:0;font-size:16.5px;line-height:1.3}
+.opt .sub{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
+.opt .mark{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);display:inline-flex;align-items:center;justify-content:center;background:var(--ivory);transition:all .2s ease}
+.opt .mark svg{opacity:0;transform:scale(.6);transition:all .2s ease}
+.opt[aria-pressed="true"]{background:var(--accent-t);border-color:var(--ink)}
+.opt[aria-pressed="true"] .mark{background:var(--ink);border-color:var(--ink)}
+.opt[aria-pressed="true"] .mark svg{opacity:1;transform:none}
+.opt.icon{flex-direction:column;align-items:flex-start;gap:10px;min-height:112px;padding:16px}
+.opt.icon .ico{width:40px;height:40px;border-radius:14px;background:var(--accent-t);display:inline-flex;align-items:center;justify-content:center}
+.opt.icon[aria-pressed="true"] .ico{background:var(--card)}
+.opt.icon .mark{position:absolute;top:12px;right:12px;width:22px;height:22px}
+.opt.chip{min-height:52px;padding:12px 16px;border-radius:18px}
+.opt.chip .lbl{font-size:15.5px}
+.opt.wide{grid-column:1 / -1}
+.opt[disabled]{opacity:.45;cursor:not-allowed}
+
+/* product tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:22px}
+.tile{position:relative;display:flex;flex-direction:column;border-radius:24px;overflow:hidden;background:var(--card);border:1.5px solid var(--line);padding:0;cursor:pointer;text-align:left;transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease}
+.tile:active{transform:scale(.98)}
+.tile img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;max-width:100%}
+.tile .cap{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px 13px}
+.tile .nm{font-family:var(--f-label);font-weight:500;font-size:11.5px;letter-spacing:.14em}
+.tile .fn{display:block;font-size:12.5px;color:var(--ink-2);margin-top:3px;letter-spacing:0;font-family:var(--f-body)}
+.tile .mark{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:inline-flex;align-items:center;justify-content:center;background:var(--ivory)}
+.tile .mark svg{opacity:0}
+.tile[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--accent)}
+.tile[aria-pressed="true"] .mark{background:var(--ink);border-color:var(--ink)}
+.tile[aria-pressed="true"] .mark svg{opacity:1}
+.tile.none{justify-content:center;align-items:center;min-height:100%;padding:18px;background:transparent;border-style:dashed;text-align:center}
+.tile.none .nm{font-family:var(--f-body);font-weight:500;letter-spacing:0;font-size:15px}
+.tile.none[aria-pressed="true"]{background:var(--accent-t)}
+.tiles.ab .tile img{aspect-ratio:3/4}
+
+/* colour swatches */
+.swatches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:22px}
+.sw{position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;height:150px;padding:16px;border-radius:999px 999px 28px 28px;border:1.5px solid transparent;cursor:pointer;text-align:left;box-shadow:inset 10px 12px 22px rgba(255,255,255,.35),inset -10px -12px 22px rgba(70,34,47,.08);transition:transform .15s ease,box-shadow .2s ease}
+.sw:active{transform:scale(.98)}
+.sw .lbl{font-family:var(--f-label);font-weight:500;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
+.sw .mark{position:absolute;bottom:13px;right:14px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.7);display:inline-flex;align-items:center;justify-content:center}
+.sw .mark svg{opacity:0}
+.sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--ivory),0 0 0 5px var(--ink)}
+.sw[aria-pressed="true"] .mark{background:var(--ink)}
+.sw[aria-pressed="true"] .mark svg{opacity:1}
+.sw.last{grid-column:1 / -1;height:110px;border-radius:999px}
+
+/* scale */
+.scale{margin-top:14px}
+.scale-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.dotbtn{aspect-ratio:1;max-height:64px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);font-family:var(--f-label);font-weight:500;font-size:17px;cursor:pointer;transition:all .2s ease}
+.dotbtn[aria-pressed="true"]{background:var(--ink);color:var(--ivory);border-color:var(--ink);box-shadow:0 0 0 3px var(--accent)}
+.scale-ends{display:flex;justify-content:space-between;gap:12px;margin-top:10px;font-size:13px;color:var(--ink-2)}
+
+/* text */
+.field{margin-top:22px;display:flex;flex-direction:column;gap:8px}
+.field label{font-size:14px;color:var(--ink-2)}
+textarea,input[type=text],input[type=tel]{width:100%;border-radius:22px;border:1.5px solid var(--line);background:var(--card);padding:16px 18px;font:inherit;font-size:17px;color:var(--ink);resize:vertical;line-height:1.45}
+textarea{min-height:150px}
+textarea:focus,input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--accent-t)}
+
+/* media */
+.hero-img{margin-top:20px;border-radius:28px;overflow:hidden;background:var(--card);border:1.5px solid var(--line)}
+.hero-img img{display:block;width:100%;max-width:100%;aspect-ratio:4/5;object-fit:cover}
+.prod-head{display:flex;gap:14px;align-items:center;margin-top:18px;padding:10px;border-radius:24px;background:var(--card);border:1.5px solid var(--line)}
+.prod-head img{width:86px;height:108px;object-fit:cover;border-radius:16px;flex-shrink:0}
+.prod-head .nm{font-family:var(--f-label);font-weight:500;font-size:13px;letter-spacing:.16em}
+.prod-head .fn{font-size:14px;color:var(--ink-2);margin-top:5px;line-height:1.35}
+
+/* footer */
+.foot{position:sticky;bottom:0;z-index:5;padding-block:12px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(247,241,232,0),var(--ivory) 30%)}
+.cta{width:100%;min-height:58px;border:0;border-radius:999px;background:var(--ink);color:var(--ivory);font-family:var(--f-label);font-weight:500;font-size:14px;letter-spacing:.14em;text-transform:uppercase;display:inline-flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform .15s ease,opacity .2s ease}
+.cta:active{transform:scale(.985)}
+.cta[disabled]{opacity:.32;cursor:not-allowed}
+.cta.soft{background:var(--accent);color:var(--ink)}
+.skip{display:block;margin:8px auto 0;padding:10px 14px;background:none;border:0;font-size:14px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.counter{font-size:13px;color:var(--ink-2);text-align:center;margin-bottom:8px;min-height:18px}
+
+/* cover & end */
+.cover{flex:1;display:flex;flex-direction:column;padding-block:28px 8px;animation:in .5s cubic-bezier(.2,.8,.2,1) both}
+.cover .art{position:relative;height:250px;margin:6px 0 8px;overflow:hidden;border-radius:28px}
+.cover .blob{position:absolute;border-radius:50%}
+.wm{display:block;height:auto}
+.tag{font-family:var(--f-label);font-weight:500;font-size:22px;line-height:1.18;letter-spacing:.02em;margin:22px 0 0}
+.lede{font-family:var(--f-display);font-style:italic;font-size:30px;line-height:1.1;margin:22px 0 0;color:var(--deep)}
+.body{font-size:16px;line-height:1.55;color:var(--ink-2);margin:12px 0 0;max-width:38ch}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:var(--card);border:1.5px solid var(--line);font-size:13px;color:var(--ink-2)}
+.demo{margin-top:14px;padding:12px 14px;border-radius:16px;background:var(--butter-t);font-size:13px;line-height:1.45;color:var(--ink)}
+.end-mark{margin:28px auto 0;display:block}
+details.json{margin-top:18px;border-radius:18px;background:var(--card);border:1.5px solid var(--line);padding:12px 14px}
+details.json summary{cursor:pointer;font-size:14px;font-weight:600}
+details.json pre{margin:10px 0 0;max-height:280px;overflow:auto;font-size:11.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.wait{margin-top:26px;padding:20px;border-radius:24px;background:var(--card);border:1.5px solid var(--line)}
+.wait h3{margin:0;font-family:var(--f-label);font-weight:500;font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+.wait p{margin:8px 0 0;font-size:14.5px;line-height:1.45;color:var(--ink-2)}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:14px;line-height:1.4;color:var(--ink-2)}
+.check input{width:22px;height:22px;margin:0;flex-shrink:0;accent-color:var(--ink)}
+.ok{margin-top:12px;font-size:14px;font-weight:600;color:var(--deep)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (min-width:700px){
+  .stage{padding-block:24px}
+  .app{min-height:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+
+<div class="stage"><main class="app" id="app" aria-live="polite"></main></div>
+
+<script>
+/* ============================================================
+   NOA Glow Check — questionnaire v1
+   API vide = mode aperçu (rien n'est envoyé).
+   La version en ligne (fonction Neon) renseigne API: '/api'.
+   ============================================================ */
+const CONFIG = {
+  API: '/api',
+  VERSION: 'noa-survey-v1',
+  IMG: 'img/'
+};
+const LIVE = !!CONFIG.API;
+const post = (path, body) => fetch(CONFIG.API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+/* ---------- icons ---------- */
+const CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F7F1E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const BACK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
+const I = (p) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#46222F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICONS = {
+  cleanser: I('<path d="M9 3h6M12 3v3M8 6h8v2a3 3 0 0 1 2 3v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-8a3 3 0 0 1 2-3z"/><path d="M9 14c1.5 1 4.5 1 6 0"/>'),
+  serum: I('<path d="M10 2h4v4h-4zM9 6h6l1 3v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9z"/><path d="M12 12.5c-1 1.3-1.5 2-1.5 2.7a1.5 1.5 0 0 0 3 0c0-.7-.5-1.4-1.5-2.7z"/>'),
+  cream: I('<path d="M4 11h16v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M5 11a7 4 0 0 1 14 0"/>'),
+  spf: I('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  mask: I('<path d="M5 5c4-2 10-2 14 0v6a7 7 0 0 1-14 0z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M10 15c1.2.8 2.8.8 4 0"/>'),
+  exfo: I('<circle cx="7" cy="8" r="1.4"/><circle cx="13" cy="6" r="1"/><circle cx="17" cy="11" r="1.6"/><circle cx="10" cy="13" r="1.1"/><circle cx="15" cy="17" r="1.2"/><circle cx="7" cy="18" r="1.5"/>'),
+  age: I('<path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z"/>'),
+  body: I('<path d="M8 3h8l-1 4h-6zM9 7h6l2 4v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8z"/>'),
+  none: I('<circle cx="12" cy="12" r="8"/><path d="M8 8l8 8"/>')
+};
+const WM = (c='#46222F', w=128) => `<svg class="wm" viewBox="0 0 354 120" style="width:${w}px" role="img" aria-label="NOA"><path d="M17 103V17L83 103V17" fill="none" stroke="${c}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/><path d="M112 60a60 60 0 1 0 120 0a60 60 0 1 0 -120 0Z M150 60a22 22 0 1 0 44 0a22 22 0 1 0 -44 0Z" fill="${c}" fill-rule="evenodd"/><path d="M261 103L299 17L337 103" fill="none" stroke="${c}" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const RING = (c, s) => `<svg viewBox="0 0 120 120" width="${s}" height="${s}" aria-hidden="true"><path d="M0 60a60 60 0 1 0 120 0a60 60 0 1 0 -120 0Z M38 60a22 22 0 1 0 44 0a22 22 0 1 0 -44 0Z" fill="${c}" fill-rule="evenodd"/></svg>`;
+
+/* ---------- products & colours (order shuffled per respondent to avoid position bias) ---------- */
+const PRODUCTS = [
+  {id:'cloud', name:'NOA CLOUD', fn:'Nettoyant doux'},
+  {id:'glow', name:'NOA GLOW', fn:'Sérum éclat vitamine C'},
+  {id:'milk', name:'NOA MILK', fn:'Crème hydratante barrière'},
+  {id:'ageless', name:'NOA AGELESS', fn:'Sérum peptides fermeté'},
+  {id:'sun', name:'NOA SUN', fn:'Protection SPF 50'}
+];
+const COLORS = [
+  {id:'pink', label:'Rose fraise', hex:'#F2A7B8'},
+  {id:'peach', label:'Pêche corail', hex:'#F6B48F'},
+  {id:'lilac', label:'Lilas', hex:'#C986E4'},
+  {id:'butter', label:'Jaune beurre', hex:'#F4D96B'},
+  {id:'ivory', label:'Ivoire crème', hex:'#F7F1E8'}
+];
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ORDER = { products: shuffle(PRODUCTS.map(p => p.id)), colors: shuffle(COLORS.map(c => c.id)) };
+const P = (id) => PRODUCTS.find(p => p.id === id);
+
+const SECTION = {
+  skin:{n:'01', t:'Your skin', c:'pink'},
+  routine:{n:'02', t:'Your routine', c:'peach'},
+  buy:{n:'03', t:'What do you buy?', c:'butter'},
+  world:{n:'04', t:'Your beauty world', c:'lilac'},
+  first:{n:'05', t:'First impression', c:'pink'},
+  price:{n:'06', t:'The price', c:'peach'},
+  intent:{n:'07', t:'Your verdict', c:'lilac'}
+};
+
+/* ---------- questions ---------- */
+const FCFA = (s) => s + ' FCFA';
+const Q = [
+  {id:'profile', section:'skin', type:'groups', title:'Pour commencer, faisons connaissance.', groups:[
+    {key:'age', label:'Votre âge', layout:'two', options:[['u18','Moins de 18 ans'],['18-24','18–24 ans'],['25-29','25–29 ans'],['30-34','30–34 ans'],['35-40','35–40 ans'],['41+','Plus de 40 ans']]},
+    {key:'country', label:'Vous vivez au', layout:'two', options:[['gabon','Gabon'],['cameroun','Cameroun'],['cote_ivoire','Côte d’Ivoire'],['guinee_eq','Guinée équatoriale'],['other','Autre pays',true]]}
+  ]},
+  {id:'skin_type', section:'skin', type:'single', title:'Comment décririez-vous votre peau ?', layout:'two', options:[['dry','Sèche'],['oily','Grasse'],['combination','Mixte'],['normal','Normale'],['sensitive','Sensible'],['unknown','Je ne sais pas']]},
+  {id:'concerns', section:'skin', type:'multi', max:3, title:'Qu’aimeriez-vous améliorer en priorité ?', hint:'Jusqu’à 3 choix.', layout:'two', options:[['acne','Boutons'],['dark_spots','Taches'],['dull','Teint terne'],['dryness','Sécheresse'],['oiliness','Brillance, excès de sébum'],['pores','Pores visibles'],['sensitivity','Irritations, sensibilité'],['dehydration','Manque d’hydratation'],['scars','Marques d’acné'],['firmness','Fermeté, ridules'],['sun','Effets du soleil'],['none','Rien en particulier',true,'exclusive']]},
+
+  {id:'routine', section:'routine', type:'groups', title:'À quoi ressemble votre routine visage aujourd’hui ?', groups:[
+    {key:'routine_count', label:'Nombre de produits utilisés', layout:'one', options:[['0','Aucun, juste de l’eau ou du savon'],['1','1 produit'],['2-3','2 ou 3 produits'],['4-5','4 ou 5 produits'],['6+','6 produits ou plus']]},
+    {key:'routine_when', label:'Quand ?', layout:'two', options:[['am_pm','Matin et soir'],['am','Surtout le matin'],['pm','Surtout le soir'],['weekly','Quelques fois par semaine'],['rarely','Rarement',true]]}
+  ]},
+  {id:'where', section:'routine', type:'multi', max:3, title:'Où achetez-vous vos soins visage le plus souvent ?', hint:'Jusqu’à 3 choix.', layout:'one', options:[['shop','Boutique de cosmétiques, parfumerie'],['pharmacy','Pharmacie'],['supermarket','Supermarché'],['market','Marché'],['social','Vendeuses sur WhatsApp, Instagram ou TikTok'],['ecommerce','Site e-commerce'],['abroad','Ramené de l’étranger'],['other','Ailleurs']]},
+  {id:'budget', section:'routine', type:'single', title:'Combien dépensez-vous environ par mois pour vos soins visage ?', layout:'one', options:[['<5k',FCFA('Moins de 5 000')],['5-10k',FCFA('5 000 – 10 000')],['10-20k',FCFA('10 000 – 20 000')],['20-35k',FCFA('20 000 – 35 000')],['35k+',FCFA('Plus de 35 000')],['unknown','Je ne sais pas']]},
+
+  {id:'categories', section:'buy', type:'multi', icons:true, title:'Qu’avez-vous acheté ces 6 derniers mois ?', hint:'Plusieurs choix possibles.', layout:'two', options:[['cleanser','Nettoyant visage',false,'','cleanser'],['serum','Sérum',false,'','serum'],['moisturizer','Crème hydratante',false,'','cream'],['sunscreen','Écran solaire',false,'','spf'],['mask','Masque',false,'','mask'],['exfoliant','Exfoliant, gommage',false,'','exfo'],['anti_aging','Soin anti-âge',false,'','age'],['body','Soin du corps',false,'','body'],['none','Aucun de ces produits',true,'exclusive','none']]},
+
+  {id:'brands', section:'world', type:'text', optional:true, title:'Quelles marques de skincare connaissez-vous ou utilisez-vous ?', hint:'Écrivez librement, même une seule marque.', placeholder:'Par exemple : les marques de votre salle de bain…', rows:3},
+  {id:'kbeauty', section:'world', type:'single', title:'Avez-vous déjà essayé des soins coréens ou asiatiques ?', hint:'Ce qu’on appelle parfois « K-beauty ».', layout:'one', options:[['regularly','Oui, régulièrement'],['sometimes','Oui, quelques fois'],['once','Une fois'],['aware','Je connais, mais je n’ai jamais essayé'],['never','Non, jamais, je ne connais pas']]},
+
+  {id:'intro_first', section:'first', type:'intro'},
+  {id:'impression', section:'first', type:'single', image:'collection.jpg', title:'Quelle est votre première impression sur ces packagings ?', layout:'one', options:[['5','Très beaux'],['4','Beaux'],['3','Corrects'],['2','Peu attirants'],['1','Pas du tout attirants']]},
+  {id:'color', section:'first', type:'color', title:'Quelle couleur vous attire le plus ?'},
+  {id:'curious', section:'first', type:'product', title:'Quel produit vous donne le plus envie d’en savoir plus ?'},
+  {id:'beautiful', section:'first', type:'product', title:'Quel packaging trouvez-vous le plus beau ?'},
+  {id:'premium', section:'first', type:'product', title:'Lequel vous semble le plus haut de gamme ?'},
+  {id:'accessible', section:'first', type:'product', title:'Lequel vous semble le plus facile à acheter, pas trop cher ?'},
+  {id:'least', section:'first', type:'product', none:'Aucun en particulier', title:'Lequel vous attire le moins ?', hint:'Il n’y a pas de mauvaise réponse.'},
+  {id:'story', section:'first', type:'product', none:'Aucun', title:'Lequel auriez-vous envie de montrer en story ?'},
+  {id:'milk_ab', section:'first', type:'ab', title:'Pour une crème hydratante, quel format préférez-vous ?', hint:'Même produit, deux packagings possibles.'},
+  {id:'buy_now', section:'first', type:'buy', title:'Si vous deviez en acheter un aujourd’hui, lequel choisiriez-vous ?'},
+
+  {id:'price_glow', section:'price', type:'price', product:'glow', image:'glow.jpg', size:'Sérum vitamine C · 30 ml', bands:[['<5k','Moins de 5 000'],['5-7k','5 000 – 7 000'],['7-9k','7 000 – 9 000'],['9-12k','9 000 – 12 000'],['12k+','Plus de 12 000'],['unknown','Je ne sais pas']]},
+  {id:'price_cloud', section:'price', type:'price', product:'cloud', image:'cloud.jpg', size:'Nettoyant gelée · 200 ml', bands:[['<3k','Moins de 3 000'],['3-5k','3 000 – 5 000'],['5-7k','5 000 – 7 000'],['7-9k','7 000 – 9 000'],['9k+','Plus de 9 000'],['unknown','Je ne sais pas']]},
+
+  {id:'reaction', section:'intent', type:'single', title:'Si cette marque était disponible aujourd’hui, quelle serait votre réaction ?', layout:'one', options:[['would_buy','J’achèterais probablement'],['would_try','J’aimerais essayer'],['reviews_first','Je regarderais d’abord les avis'],['compare','Je comparerais avec d’autres marques'],['not_interested','Je ne serais pas intéressée']]},
+  {id:'drivers', section:'intent', type:'multi', max:3, title:'Qu’est-ce qui vous ferait vraiment acheter ?', hint:'Jusqu’à 3 choix.', layout:'two', options:[['price','Le prix'],['efficacy','L’efficacité'],['ingredients','Les ingrédients'],['packaging','Le packaging'],['reviews','Les avis clients'],['word_of_mouth','Les recommandations de proches'],['creators','Les créatrices de contenu'],['availability','La disponibilité près de chez moi'],['origin','L’origine de la marque'],['promo','Les promotions'],['texture','La texture, le parfum',true]]},
+  {id:'dream', section:'intent', type:'text', optional:true, title:'Si vous pouviez créer le soin parfait pour vous, que devrait-il absolument faire ?', hint:'Une phrase suffit. C’est la question la plus utile pour nous.', placeholder:'Il devrait…', rows:5}
+];
+const NUMBERED = Q.filter(q => q.type !== 'intro');
+const TOTAL = NUMBERED.length;
+
+/* ---------- state ---------- */
+const S = { i: -1, answers: {}, startedAt: null, done: false, minor: false, dir: 1 };
+const app = document.getElementById('app');
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const setAccent = (c) => { const r = document.documentElement.style; r.setProperty('--accent', `var(--${c})`); r.setProperty('--accent-t', `var(--${c}-t)`); };
+
+/* ---------- rendering helpers ---------- */
+function header(q) {
+  const n = NUMBERED.indexOf(q) + 1;
+  const pct = q.type === 'intro' ? (NUMBERED.indexOf(Q[S.i + 1]) / TOTAL) * 100 : (n / TOTAL) * 100;
+  const label = q.type === 'intro' ? '' : `${String(n).padStart(2,'0')} / ${TOTAL}`;
+  return `<div class="top">
+    <div class="top-row">
+      <button class="back" id="btn-back" aria-label="Question précédente">${BACK}</button>
+      ${WM('#46222F', 64)}
+      <span class="count" aria-label="Question ${n} sur ${TOTAL}">${label}</span>
+    </div>
+    <div class="bar" aria-hidden="true"><i style="width:${pct}%"></i><b style="left:${pct}%"></b></div>
+  </div>`;
+}
+function kicker(q) { const s = SECTION[q.section]; return `<span class="kicker"><span class="dot"></span>${s.n} — ${esc(s.t)}</span>`; }
+function optBtn(key, val, label, selected, extra = '', sub = '') {
+  label = String(label).replace(/(\d) (\d)/g, '$1\u00A0$2');
+  return `<button type="button" class="opt ${extra}" data-key="${key}" data-val="${esc(val)}" aria-pressed="${selected}"><span class="lbl">${esc(label)}${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</span><span class="mark">${CHECK}</span></button>`;
+}
+function optionsGrid(key, opts, layout, isSelected, iconMode) {
+  return `<div class="opts ${layout === 'two' ? 'two' : ''}">${opts.map(([v, l, wide, , ico]) => {
+    const sel = isSelected(v);
+    if (iconMode) return `<button type="button" class="opt icon ${wide ? 'wide' : ''}" data-key="${key}" data-val="${esc(v)}" aria-pressed="${sel}"><span class="ico">${ICONS[ico]}</span><span class="lbl">${esc(l)}</span><span class="mark">${CHECK}</span></button>`;
+    return optBtn(key, v, l, sel, wide && layout === 'two' ? 'wide' : '');
+  }).join('')}</div>`;
+}
+function tile(key, id, sel) {
+  const p = P(id);
+  return `<button type="button" class="tile" data-key="${key}" data-val="${id}" aria-pressed="${sel}"><img src="${CONFIG.IMG}p-${id}.jpg" alt="${esc(p.name)}, ${esc(p.fn)}" loading="lazy"><span class="cap"><span><span class="nm">${esc(p.name)}</span><span class="fn">${esc(p.fn)}</span></span><span class="mark">${CHECK}</span></span></button>`;
+}
+function noneTile(key, label, sel) {
+  return `<button type="button" class="tile none" data-key="${key}" data-val="none" aria-pressed="${sel}"><span class="nm">${esc(label)}</span></button>`;
+}
+function footer(label, enabled, opts = {}) {
+  return `<div class="foot">
+    ${opts.counter !== undefined ? `<div class="counter" id="counter">${opts.counter}</div>` : ''}
+    <button type="button" class="cta" id="btn-next" ${enabled ? '' : 'disabled'}>${esc(label)} ${ARROW}</button>
+    ${opts.skip ? `<button type="button" class="skip" id="btn-skip">${esc(opts.skip)}</button>` : ''}
+  </div>`;
+}
+
+/* ---------- screens ---------- */
+function renderCover() {
+  setAccent('pink');
+  app.innerHTML = `<section class="cover">
+    <div class="art" aria-hidden="true">
+      <div class="blob" style="width:230px;height:230px;left:-40px;top:6px;background:var(--pink)"></div>
+      <div class="blob" style="width:150px;height:150px;left:150px;top:0;background:var(--lilac);opacity:.85"></div>
+      <div class="blob" style="width:120px;height:120px;right:-14px;top:96px;background:var(--butter)"></div>
+      <div class="blob" style="width:96px;height:96px;left:178px;top:150px;background:var(--peach)"></div>
+      <div style="position:absolute;left:28px;top:70px">${RING('#F7F1E8', 96)}</div>
+    </div>
+    ${WM('#46222F', 210)}
+    <p class="tag">LESS NOISE.<br>MORE GLOW.</p>
+    <p class="lede">On prépare quelque chose pour votre peau.</p>
+    <p class="body">2 minutes. Quelques questions sur votre routine beauté, vos habitudes et ce que vous aimeriez vraiment trouver en skincare.</p>
+    <div class="meta"><span class="pill">${TOTAL} questions</span><span class="pill">Anonyme</span><span class="pill">Environ 2 à 3 min</span></div>
+    ${LIVE ? '' : '<div class="demo">Aperçu : les réponses ne sont pas enregistrées dans cette version.</div>'}
+  </section>
+  <div class="foot"><button type="button" class="cta soft" id="btn-start">LET’S GLOW ${ARROW}</button></div>`;
+  document.getElementById('btn-start').onclick = () => { S.startedAt = S.startedAt || new Date().toISOString(); go(0, 1); };
+}
+
+function renderQuestion() {
+  const q = Q[S.i];
+  setAccent(SECTION[q.section].c);
+  const A = S.answers;
+  let inner = '', foot = '';
+
+  if (q.type === 'intro') {
+    inner = `<span class="kicker"><span class="dot"></span>05 — First impression</span>
+      <h1 class="q">Imaginez que vous voyez ces produits pour la première fois.</h1>
+      <p class="hint">Sur Instagram ou dans une boutique. Répondez à l’instinct : il n’y a ni bonne ni mauvaise réponse.</p>
+      <div class="hero-img"><img src="${CONFIG.IMG}collection.jpg" alt="Cinq produits de soin : nettoyant rose, sérum pêche, sérum lilas, crème jaune, protection solaire ivoire"></div>`;
+    foot = footer('Je regarde', true);
+  }
+
+  if (q.type === 'single') {
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
+      ${q.image ? `<div class="hero-img"><img src="${CONFIG.IMG}${q.image}" alt="Les cinq produits"></div>` : ''}
+      ${optionsGrid(q.id, q.options, q.layout, v => A[q.id] === v)}`;
+    foot = footer('Continuer', !!A[q.id]);
+  }
+
+  if (q.type === 'multi') {
+    const cur = A[q.id] || [];
+    const isNone = cur.some(v => (q.options.find(o => o[0] === v) || [])[3] === 'exclusive');
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
+      ${optionsGrid(q.id, q.options, q.layout, v => cur.includes(v), q.icons)}`;
+    const counter = q.max ? `${cur.length} / ${q.max} sélectionné${cur.length > 1 ? 's' : ''}` : (cur.length ? `${cur.length} sélectionné${cur.length > 1 ? 's' : ''}` : '');
+    foot = footer('Continuer', cur.length > 0, { counter: isNone ? '' : counter });
+  }
+
+  if (q.type === 'groups') {
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>
+      ${q.groups.map(g => `<div class="group-label" id="lbl-${g.key}">${esc(g.label)}</div>${optionsGrid(g.key, g.options, g.layout, v => A[g.key] === v).replace('class="opts', `role="group" aria-labelledby="lbl-${g.key}" class="opts`)}`).join('')}`;
+    foot = footer('Continuer', q.groups.every(g => A[g.key]));
+  }
+
+  if (q.type === 'text') {
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
+      <div class="field"><label for="txt-${q.id}" class="sr">${esc(q.title)}</label>
+      <textarea id="txt-${q.id}" rows="${q.rows || 4}" maxlength="600" placeholder="${esc(q.placeholder || '')}">${esc(A[q.id] || '')}</textarea></div>`;
+    const last = S.i === Q.length - 1;
+    foot = footer(last ? 'Envoyer mes réponses' : 'Continuer', !!(A[q.id] || '').trim(), { skip: q.optional ? 'Passer cette question' : '' });
+  }
+
+  if (q.type === 'color') {
+    const cols = ORDER.colors.map(id => COLORS.find(c => c.id === id));
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>
+      <div class="swatches" role="group" aria-label="Couleurs">${cols.map((c, i) => `<button type="button" class="sw ${i === cols.length - 1 ? 'last' : ''}" style="background:${c.hex};${c.id === 'ivory' ? 'border-color:rgba(70,34,47,.16);' : ''}" data-key="${q.id}" data-val="${c.id}" aria-pressed="${A[q.id] === c.id}"><span class="lbl">${esc(c.label)}</span><span class="mark">${CHECK}</span></button>`).join('')}</div>`;
+    foot = footer('Continuer', !!A[q.id]);
+  }
+
+  if (q.type === 'product') {
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
+      <div class="tiles" role="group" aria-label="Produits">${ORDER.products.map(id => tile(q.id, id, A[q.id] === id)).join('')}${q.none ? noneTile(q.id, q.none, A[q.id] === 'none') : ''}</div>`;
+    foot = footer('Continuer', !!A[q.id]);
+  }
+
+  if (q.type === 'ab') {
+    const order = S.abOrder || (S.abOrder = shuffle(['a', 'b']));
+    const img = { a: 'p-milk.jpg', b: 'milk-b.jpg' };
+    const lab = { a: 'Pot à dôme', b: 'Flacon pompe' };
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1><p class="hint">${esc(q.hint)}</p>
+      <div class="tiles ab" role="group" aria-label="Formats">${order.map((k, i) => `<button type="button" class="tile" data-key="${q.id}" data-val="${k}" aria-pressed="${A[q.id] === k}"><img src="${CONFIG.IMG}${img[k]}" alt="Format ${i + 1} : ${lab[k]}"><span class="cap"><span><span class="nm">FORMAT ${i + 1}</span><span class="fn">${lab[k]}</span></span><span class="mark">${CHECK}</span></span></button>`).join('')}</div>
+      <div class="opts">${optBtn(q.id, 'none', 'Aucune préférence', A[q.id] === 'none', 'chip')}</div>`;
+    foot = footer('Continuer', !!A[q.id]);
+  }
+
+  if (q.type === 'buy') {
+    const pick = A.buy_now;
+    inner = `${kicker(q)}<h1 class="q">${esc(q.title)}</h1>
+      <div class="tiles" role="group" aria-label="Produits">${ORDER.products.map(id => tile('buy_now', id, pick === id)).join('')}${noneTile('buy_now', 'Aucun', pick === 'none')}</div>
+      ${pick && pick !== 'none' ? `<div class="group-label" id="lbl-lk">À quel point seriez-vous susceptible de l’acheter ?</div>
+      <div class="scale" role="group" aria-labelledby="lbl-lk"><div class="scale-row">${[1,2,3,4,5].map(n => `<button type="button" class="dotbtn" data-key="buy_likelihood" data-val="${n}" aria-pressed="${A.buy_likelihood === String(n)}" aria-label="${n} sur 5">${n}</button>`).join('')}</div>
+      <div class="scale-ends"><span>Pas du tout</span><span>Certainement</span></div></div>` : ''}`;
+    foot = footer('Continuer', pick === 'none' || (pick && A.buy_likelihood));
+  }
+
+  if (q.type === 'price') {
+    const p = P(q.product);
+    const k1 = q.id + '_reasonable', k2 = q.id + '_too_expensive';
+    inner = `${kicker(q)}<h1 class="q">Parlons prix.</h1>
+      <div class="prod-head"><img src="${CONFIG.IMG}${q.image}" alt="${esc(p.name)}"><div><div class="nm">${esc(p.name)}</div><div class="fn">${esc(q.size)}</div></div></div>
+      <div class="group-label" id="lbl-${k1}">Quel prix vous semblerait raisonnable ?</div>
+      <div class="opts two" role="group" aria-labelledby="lbl-${k1}">${q.bands.map(([v, l]) => optBtn(k1, v, v === 'unknown' ? l : l + ' F', A[k1] === v, 'chip')).join('')}</div>
+      <div class="group-label" id="lbl-${k2}">À partir de quel prix ce serait trop cher ?</div>
+      <div class="opts two" role="group" aria-labelledby="lbl-${k2}">${q.bands.map(([v, l]) => optBtn(k2, v, v === 'unknown' ? l : l + ' F', A[k2] === v, 'chip')).join('')}</div>
+      <p class="hint" style="margin-top:14px">Prix en FCFA.</p>`;
+    foot = footer('Continuer', !!(A[k1] && A[k2]));
+  }
+
+  app.innerHTML = header(q) + `<section class="screen ${S.dir < 0 ? 'back-anim' : ''}">${inner}</section>` + foot;
+  bind(q);
+  window.scrollTo(0, 0);
+}
+
+/* ---------- interactions ---------- */
+let autoTimer = null;
+function bind(q) {
+  const back = document.getElementById('btn-back');
+  back.onclick = () => go(S.i - 1, -1);
+  const next = document.getElementById('btn-next');
+  if (next) next.onclick = () => advance(q);
+  const skip = document.getElementById('btn-skip');
+  if (skip) skip.onclick = () => { S.answers[q.id] = ''; advance(q, true); };
+
+  const ta = app.querySelector('textarea');
+  if (ta) ta.addEventListener('input', () => { S.answers[q.id] = ta.value; next.disabled = !ta.value.trim(); });
+
+  app.querySelectorAll('[data-key]').forEach(btn => btn.addEventListener('click', () => choose(q, btn.dataset.key, btn.dataset.val)));
+}
+
+function choose(q, key, val) {
+  const A = S.answers;
+  clearTimeout(autoTimer);
+  if (q.type === 'multi') {
+    let cur = (A[key] || []).slice();
+    const opt = q.options.find(o => o[0] === val);
+    const exclusive = opt && opt[3] === 'exclusive';
+    if (cur.includes(val)) cur = cur.filter(v => v !== val);
+    else if (exclusive) cur = [val];
+    else {
+      cur = cur.filter(v => (q.options.find(o => o[0] === v) || [])[3] !== 'exclusive');
+      if (q.max && cur.length >= q.max) { flashCounter(`Maximum ${q.max} choix. Retirez-en un pour en ajouter un autre.`); return; }
+      cur.push(val);
+    }
+    A[key] = cur;
+    renderQuestion();
+    return;
+  }
+  if (key === 'buy_now' && A.buy_now !== val) delete A.buy_likelihood;
+  A[key] = val;
+  renderQuestion();
+  // single-tap questions move on by themselves
+  const auto = ['single', 'color', 'product', 'ab'].includes(q.type) || (q.type === 'buy' && (key === 'buy_likelihood' || val === 'none'));
+  if (auto) autoTimer = setTimeout(() => advance(q), 380);
+}
+function flashCounter(msg) { const c = document.getElementById('counter'); if (c) { c.textContent = msg; c.style.color = 'var(--deep)'; } }
+
+function advance(q) {
+  if (q.id === 'profile' && S.answers.age === 'u18') { S.minor = true; return renderMinor(); }
+  if (S.i >= Q.length - 1) return submit();
+  go(S.i + 1, 1);
+}
+function go(i, dir) {
+  S.dir = dir;
+  if (i < 0) { S.i = -1; return renderCover(); }
+  S.i = i;
+  renderQuestion();
+}
+
+/* ---------- submit ---------- */
+function payload() {
+  const A = S.answers;
+  const submittedAt = new Date().toISOString();
+  return {
+    version: CONFIG.VERSION,
+    started_at: S.startedAt,
+    submitted_at: submittedAt,
+    duration_sec: Math.round((Date.parse(submittedAt) - Date.parse(S.startedAt)) / 1000),
+    country: A.country || null,
+    age: A.age || null,
+    lang: 'fr',
+    display_order: { products: ORDER.products, colors: ORDER.colors, milk_ab: S.abOrder || null },
+    answers: A
+  };
+}
+async function submit() {
+  const data = payload();
+  S.done = true;
+  let saved = false, error = '';
+  if (LIVE) {
+    try {
+      const r = await post('/response', data);
+      saved = r.ok; if (!r.ok) error = 'status ' + r.status;
+    } catch (e) { error = 'network'; }
+  }
+  renderEnd(data, saved, error);
+}
+
+function renderEnd(data, saved, error) {
+  setAccent('pink');
+  app.innerHTML = `<section class="cover" style="padding-top:44px">
+    ${WM('#46222F', 150)}
+    <h1 class="q" style="font-family:var(--f-label);font-weight:500;font-size:26px;line-height:1.2;letter-spacing:.02em;margin-top:34px">THANK YOU,<br>GLOW GIRL.</h1>
+    <p class="body" style="font-size:17px;color:var(--ink)">Vos réponses vont nous aider à créer quelque chose que vous aurez réellement envie d’utiliser.</p>
+    ${LIVE && !saved ? `<div class="demo">Vos réponses n’ont pas pu être envoyées (connexion). <button type="button" class="skip" id="btn-retry" style="display:inline;margin:0;padding:0">Réessayer</button></div>` : ''}
+    <div class="wait">
+      <h3>Être prévenue du lancement</h3>
+      <p>Facultatif. Laissez votre numéro WhatsApp si vous voulez recevoir un message au lancement. Il est enregistré séparément de vos réponses.</p>
+      <div class="field" style="margin-top:12px"><label for="wa">Numéro WhatsApp, avec indicatif</label><input type="tel" id="wa" inputmode="tel" autocomplete="tel" placeholder="+241 …"></div>
+      <label class="check"><input type="checkbox" id="wa-ok"> J’accepte d’être contactée par WhatsApp au sujet du lancement. Je peux me désinscrire à tout moment.</label>
+      <button type="button" class="cta" id="btn-wa" style="margin-top:14px" disabled>M’inscrire</button>
+      <div class="ok" id="wa-msg" role="status"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:30px">${RING('#F2A7B8', 40)}<p class="tag" style="margin:0;font-size:16px">LESS NOISE.<br>MORE GLOW.</p></div>
+    ${LIVE ? '' : `<details class="json"><summary>Aperçu : voir les données qui seraient enregistrées</summary><pre>${esc(JSON.stringify(data, null, 2))}</pre></details>`}
+  </section>`;
+  const wa = document.getElementById('wa'), ok = document.getElementById('wa-ok'), b = document.getElementById('btn-wa'), msg = document.getElementById('wa-msg');
+  const valid = () => { b.disabled = !(ok.checked && wa.value.replace(/\D/g, '').length >= 8); };
+  wa.addEventListener('input', valid); ok.addEventListener('change', valid);
+  b.onclick = async () => {
+    b.disabled = true;
+    if (!LIVE) { msg.textContent = 'Aperçu : numéro non enregistré.'; return; }
+    try {
+      const r = await post('/waitlist', { phone: wa.value.trim(), country: data.country, consent: true, version: CONFIG.VERSION });
+      msg.textContent = r.ok ? 'C’est noté. À très vite.' : 'L’inscription n’a pas fonctionné. Réessayez dans un instant.';
+      if (!r.ok) b.disabled = false;
+    } catch (e) { msg.textContent = 'Pas de connexion. Réessayez dans un instant.'; b.disabled = false; }
+  };
+  const retry = document.getElementById('btn-retry');
+  if (retry) retry.onclick = submit;
+  window.scrollTo(0, 0);
+}
+
+function renderMinor() {
+  setAccent('pink');
+  app.innerHTML = `<section class="cover" style="padding-top:44px">
+    ${WM('#46222F', 150)}
+    <h1 class="q" style="margin-top:30px">Merci beaucoup.</h1>
+    <p class="body" style="font-size:17px;color:var(--ink)">Ce questionnaire s’adresse aux personnes de 18 ans et plus. Aucune de vos réponses n’a été enregistrée.</p>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:30px">${RING('#F2A7B8', 40)}<p class="tag" style="margin:0;font-size:16px">LESS NOISE.<br>MORE GLOW.</p></div>
+  </section>
+  <div class="foot"><button type="button" class="cta soft" id="btn-fix">Je me suis trompée d’âge</button></div>`;
+  document.getElementById('btn-fix').onclick = () => { delete S.answers.age; S.minor = false; go(0, -1); };
+}
+
+renderCover();
+</script>
+
+</body>
+</html>
