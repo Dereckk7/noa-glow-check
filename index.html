@@ -280,7 +280,8 @@ const UI = {
   jsonSummary: t('Aperçu : voir les données qui seraient enregistrées', 'Vista previa: ver los datos que se guardarían', 'Preview: see the data that would be saved'),
   minorTitle: t('Merci beaucoup.', 'Muchas gracias.', 'Thank you so much.'),
   minorBody: t('Ce questionnaire s’adresse aux personnes de 18 ans et plus. Aucune de vos réponses n’a été enregistrée.', 'Este cuestionario está dirigido a personas de 18 años o más. No se ha guardado ninguna de sus respuestas.', 'This survey is for people aged 18 and over. None of your answers were saved.'),
-  minorBtn: t('Je me suis trompée d’âge', 'Me equivoqué de edad', 'I picked the wrong age')
+  minorBtn: t('Je me suis trompée d’âge', 'Me equivoqué de edad', 'I picked the wrong age'),
+  sending: t('Envoi…', 'Enviando…', 'Sending…')
 };
 
 /* ---------- icons ---------- */
@@ -634,6 +635,7 @@ function choose(q, key, val) {
 function flashCounter(msg) { const c = document.getElementById('counter'); if (c) { c.textContent = msg; c.style.color = 'var(--deep)'; } }
 
 function advance(q) {
+  if (SENDING || S.saved) return;
   if (q.id === 'profile' && S.answers.age === 'u18') { S.minor = true; return renderMinor(); }
   if (S.i >= Q.length - 1) return submit();
   go(S.i + 1, 1);
@@ -661,13 +663,20 @@ function payload() {
     answers: A
   };
 }
+let SENDING = false;
 async function submit() {
-  const data = payload();
-  S.done = true;
+  if (SENDING || S.saved) return;            // never send the same questionnaire twice
+  SENDING = true;
+  clearTimeout(autoTimer);
+  const btn = document.getElementById('btn-next');
+  if (btn) { btn.disabled = true; btn.textContent = L(UI.sending); }
+  const data = S.data || (S.data = payload());  // same payload (and timestamps) on retry
   let saved = false;
   if (LIVE) {
     try { const r = await post('/response', data); saved = r.ok; } catch (e) { saved = false; }
   }
+  S.saved = saved || !LIVE;
+  SENDING = false;
   renderEnd(data, saved);
 }
 
