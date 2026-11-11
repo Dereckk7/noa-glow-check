@@ -214,7 +214,7 @@ details.json pre{margin:10px 0 0;max-height:280px;overflow:auto;font-size:11.5px
    ============================================================ */
 const CONFIG = {
   API: '/api',
-  VERSION: 'noa-survey-v3.1',
+  VERSION: 'noa-survey-v3.2',
   IMG: 'img/'
 };
 const LIVE = !!CONFIG.API;
@@ -421,11 +421,11 @@ const Q = [
 
   { id: 'price_glow', section: 'price', type: 'price', product: 'glow', image: 'p-glow.jpg', usual: t('Combien payez-vous habituellement pour un sérum ?', '¿Cuánto paga normalmente por un sérum?', 'How much do you usually pay for a serum?'), size: t('Sérum vitamine C · 30 ml', 'Sérum de vitamina C · 30 ml', 'Vitamin C serum · 30 ml'),
     money: {
-    fcfa: [['<5k', [null, 5000]], ['5-7k', [5000, 7000]], ['7-9k', [7000, 9000]], ['9-12k', [9000, 12000]], ['12k+', [12000, null]]],
+    fcfa: [['<5k', [null, 5000]], ['5-8k', [5000, 8000]], ['8-10k', [8000, 10000]], ['10-12k', [10000, 12000]], ['12-15k', [12000, 15000]], ['15k+', [15000, null]]],
     intl: [['x:<10', [null, 10]], ['x:10-15', [10, 15]], ['x:15-20', [15, 20]], ['x:20-30', [20, 30]], ['x:30+', [30, null]]] } },
   { id: 'price_cloud', section: 'price', type: 'price', product: 'cloud', image: 'p-cloud.jpg', usual: t('Combien payez-vous habituellement pour un nettoyant visage ?', '¿Cuánto paga normalmente por un limpiador facial?', 'How much do you usually pay for a face cleanser?'), size: t('Nettoyant gelée · 200 ml', 'Limpiador en gel · 200 ml', 'Jelly cleanser · 200 ml'),
     money: {
-    fcfa: [['<3k', [null, 3000]], ['3-5k', [3000, 5000]], ['5-7k', [5000, 7000]], ['7-9k', [7000, 9000]], ['9k+', [9000, null]]],
+    fcfa: [['<4k', [null, 4000]], ['4-6k', [4000, 6000]], ['6-8k', [6000, 8000]], ['8-10k', [8000, 10000]], ['10-12k', [10000, 12000]], ['12k+', [12000, null]]],
     intl: [['x:<8', [null, 8]], ['x:8-12', [8, 12]], ['x:12-16', [12, 16]], ['x:16-22', [16, 22]], ['x:22+', [22, null]]] } },
 
   { id: 'kbeauty_concept', section: 'intent', type: 'single', title: t('Une marque de soins inspirée de la K-beauty, pensée pour les peaux noires et métissées. Qu’en pensez-vous ?', 'Una marca de cuidado inspirada en la K-beauty, pensada para pieles negras y mestizas. ¿Qué le parece?', 'A skincare brand inspired by K-beauty, designed for Black and mixed-race skin. What do you think?'), layout: 'one', options: [
