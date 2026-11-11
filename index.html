@@ -214,7 +214,7 @@ details.json pre{margin:10px 0 0;max-height:280px;overflow:auto;font-size:11.5px
    ============================================================ */
 const CONFIG = {
   API: '/api',
-  VERSION: 'noa-survey-v3',
+  VERSION: 'noa-survey-v3.1',
   IMG: 'img/'
 };
 const LIVE = !!CONFIG.API;
@@ -269,6 +269,7 @@ const UI = {
   priceOk: t('Quel prix vous semblerait raisonnable ?', '¿Qué precio le parecería razonable?', 'What price would feel reasonable?'),
   priceHigh: t('À partir de quel prix ce serait trop cher ?', '¿A partir de qué precio sería demasiado caro?', 'At what price would it be too expensive?'),
   priceNote: t('Prix en {c}.', 'Precios en {c}.', 'Prices in {c}.'),
+  noBuy: t('Je n’en achète pas', 'No compro', 'I don’t buy one'),
   noAnswer: t('Je préfère ne pas répondre', 'Prefiero no responder', 'Prefer not to say'),
   unknown: t('Je ne sais pas', 'No lo sé', 'I don’t know'),
   format: t('FORMAT', 'FORMATO', 'FORMAT'),
@@ -418,11 +419,11 @@ const Q = [
   { id: 'milk_ab', section: 'first', type: 'ab', title: t('Pour une crème hydratante, quel format préférez-vous ?', 'Para una crema hidratante, ¿qué formato prefiere?', 'For a moisturizer, which format do you prefer?'), hint: t('Même produit, deux packagings possibles.', 'Mismo producto, dos envases posibles.', 'Same product, two possible packs.') },
   { id: 'buy_now', section: 'first', type: 'buy', title: t('Si vous deviez en acheter un aujourd’hui, lequel choisiriez-vous ?', 'Si tuviera que comprar uno hoy, ¿cuál elegiría?', 'If you had to buy one today, which would you choose?') },
 
-  { id: 'price_glow', section: 'price', type: 'price', product: 'glow', image: 'p-glow.jpg', size: t('Sérum vitamine C · 30 ml', 'Sérum de vitamina C · 30 ml', 'Vitamin C serum · 30 ml'),
+  { id: 'price_glow', section: 'price', type: 'price', product: 'glow', image: 'p-glow.jpg', usual: t('Combien payez-vous habituellement pour un sérum ?', '¿Cuánto paga normalmente por un sérum?', 'How much do you usually pay for a serum?'), size: t('Sérum vitamine C · 30 ml', 'Sérum de vitamina C · 30 ml', 'Vitamin C serum · 30 ml'),
     money: {
     fcfa: [['<5k', [null, 5000]], ['5-7k', [5000, 7000]], ['7-9k', [7000, 9000]], ['9-12k', [9000, 12000]], ['12k+', [12000, null]]],
     intl: [['x:<10', [null, 10]], ['x:10-15', [10, 15]], ['x:15-20', [15, 20]], ['x:20-30', [20, 30]], ['x:30+', [30, null]]] } },
-  { id: 'price_cloud', section: 'price', type: 'price', product: 'cloud', image: 'p-cloud.jpg', size: t('Nettoyant gelée · 200 ml', 'Limpiador en gel · 200 ml', 'Jelly cleanser · 200 ml'),
+  { id: 'price_cloud', section: 'price', type: 'price', product: 'cloud', image: 'p-cloud.jpg', usual: t('Combien payez-vous habituellement pour un nettoyant visage ?', '¿Cuánto paga normalmente por un limpiador facial?', 'How much do you usually pay for a face cleanser?'), size: t('Nettoyant gelée · 200 ml', 'Limpiador en gel · 200 ml', 'Jelly cleanser · 200 ml'),
     money: {
     fcfa: [['<3k', [null, 3000]], ['3-5k', [3000, 5000]], ['5-7k', [5000, 7000]], ['7-9k', [7000, 9000]], ['9k+', [9000, null]]],
     intl: [['x:<8', [null, 8]], ['x:8-12', [8, 12]], ['x:12-16', [12, 16]], ['x:16-22', [16, 22]], ['x:22+', [22, null]]] } },
@@ -461,7 +462,7 @@ function moneyOptions(q) {
   const list = c === 'FCFA' ? q.money.fcfa : q.money.intl;
   return list.concat([['unknown', UI.unknown]]);
 }
-const MONEY_KEYS = ['budget', 'price_glow_reasonable', 'price_glow_too_expensive', 'price_cloud_reasonable', 'price_cloud_too_expensive'];
+const MONEY_KEYS = ['budget', 'price_glow_usual', 'price_cloud_usual', 'price_glow_reasonable', 'price_glow_too_expensive', 'price_cloud_reasonable', 'price_cloud_too_expensive'];
 const TONES = ['#D9A57B', '#C68B5E', '#B07448', '#96603A', '#7D4E2F', '#653D25', '#4E2E1C', '#3A2216'];
 
 /* ---------- state ---------- */
@@ -630,17 +631,19 @@ function renderQuestion() {
 
   if (q.type === 'price') {
     const p = P(q.product);
-    const k1 = q.id + '_reasonable', k2 = q.id + '_too_expensive';
+    const k0 = q.id + '_usual', k1 = q.id + '_reasonable', k2 = q.id + '_too_expensive';
     const sym = currency() === 'FCFA' ? '' : SYMBOL[currency()];
     const chips = (key) => moneyOptions(q).map(([v, l]) => optBtn(key, v, optLabel(l, sym), A[key] === v, 'chip')).join('');
     inner = `${kicker(q)}<h1 class="q">${esc(L(UI.priceTitle))}</h1>
       <div class="prod-head"><img src="${CONFIG.IMG}${q.image}" alt="${esc(p.name)}"><div><div class="nm">${esc(p.name)}</div><div class="fn">${esc(L(q.size))}</div></div></div>
-      <div class="group-label" id="lbl-${k1}">${esc(L(UI.priceOk))}</div>
+      <div class="group-label" id="lbl-${k0}">${esc(L(q.usual))}</div>
+      <div class="opts two" role="group" aria-labelledby="lbl-${k0}">${chips(k0)}${optBtn(k0, 'none', L(UI.noBuy), A[k0] === 'none', 'chip wide')}</div>
+      <div class="group-label" id="lbl-${k1}">${esc(L(UI.priceOk))} <span style="text-transform:none;letter-spacing:0">(${esc(p.name)})</span></div>
       <div class="opts two" role="group" aria-labelledby="lbl-${k1}">${chips(k1)}</div>
-      <div class="group-label" id="lbl-${k2}">${esc(L(UI.priceHigh))}</div>
+      <div class="group-label" id="lbl-${k2}">${esc(L(UI.priceHigh))} <span style="text-transform:none;letter-spacing:0">(${esc(p.name)})</span></div>
       <div class="opts two" role="group" aria-labelledby="lbl-${k2}">${chips(k2)}</div>
       <p class="hint" style="margin-top:14px">${esc(L(UI.priceNote).replace('{c}', currency()))}</p>`;
-    foot = footer(UI.next, !!(A[k1] && A[k2]));
+    foot = footer(UI.next, !!(A[k0] && A[k1] && A[k2]));
   }
 
   app.innerHTML = header(q) + `<section class="screen ${S.dir < 0 ? 'back-anim' : ''}">${inner}</section>` + foot;
